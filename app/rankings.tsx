@@ -1,19 +1,10 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
-interface RankingProps {
-  teamName: string;
-  playerName: string;
-  seasonYear: number;
-  playerId: number;
-}
-
-export default function Rankings({ 
-  teamName = "Arizona",
-  playerName = "Caleb Love",
-  seasonYear = 2024,
-  playerId = 1
-}: RankingProps) {
+export default function Rankings() {
+  const params = useLocalSearchParams();
+  const { teamName, playerName, seasonYear, playerId } = params;
   return (
     <View style={styles.container}>
       <View style={styles.card}>

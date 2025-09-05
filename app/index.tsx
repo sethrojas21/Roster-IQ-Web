@@ -1,10 +1,10 @@
 import PlayerCard from "@/components/testing/home/topplayercard";
-import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 // @ts-ignore
 import { players } from "../data/players";
 
+import TableView from "@/components/testing/home/table";
 import { createClient } from "@libsql/client/web";
 
 export const db = createClient({
@@ -42,67 +42,49 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Top Transfers</Text>
-      <ScrollView 
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {players.map((player, index) => (
-          <PlayerCard 
-            key={player.name}
-            name={player.name}
-            year={player.year}
-            team={player.team}
-            position={player.position}
-            gradientLevel={(index % 4) + 1}
-          />
-        ))}
-      </ScrollView>
+      
+      <View style={styles.container}>
+        <Text style={styles.header}>Top Transfers</Text>
+        <ScrollView 
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {players.map((player, index) => (
+            <PlayerCard 
+              key={player.name}
+              name={player.name}
+              year={player.year}
+              team={player.team}
+              position={player.position}
+              gradientLevel={(index % 4) + 1}
+            />
+          ))}
+        </ScrollView>
+      </View>
       
       <Text style={styles.header}>Player Search</Text>
       
       {loading ? (
         <ActivityIndicator size="large" color="#fff" style={styles.loader} />
       ) : (
-        <ScrollView style={styles.tableContainer}>
-          <View style={styles.tableHeader}>
-            <Text style={styles.headerCell}>Name</Text>
-            <Text style={styles.headerCell}>Team</Text>
-            <Text style={styles.headerCell}>Position</Text>
-            <Text style={styles.headerCell}>Year</Text>
-            <Text style={styles.headerCell}>Height</Text>
-          </View>
-          <ScrollView>
-            {transfers.map((player, index) => (
-              <Pressable 
-                key={index}
-                style={({ pressed }) => [
-                  styles.tableRow,
-                  index % 2 === 0 && styles.evenRow,
-                  pressed && styles.pressedRow
-                ]}
-                onPress={() => {
-                  router.push({
-                    pathname: "/rankings",
-                    params: {
-                      teamName: player.team_name,
-                      playerName: player.player_name,
-                      seasonYear: player.season_year,
-                      playerId: player.player_id
-                    }
-                  });
-                }}
-              >
-                <Text style={styles.cell}>{player.player_name}</Text>
-                <Text style={styles.cell}>{player.team_name}</Text>
-                <Text style={styles.cell}>{player.position}</Text>
-                <Text style={styles.cell}>{player.player_year}</Text>
-                <Text style={styles.cell}>{player.height_inches}"</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </ScrollView>
+        <View style={styles.tableContainer}>
+          <TableView 
+            data={transfers.map(row => {
+              const mappedRow = {
+                season_year: row.season_year,
+                player_name: row.player_name,
+                player_id: row.player_id,
+                player_year: row.player_year,
+                team_name: row.team_name,
+                position: row.position,
+                height_inches: row.height_inches || 0
+              };
+              console.log('Mapped row:', mappedRow);
+              return mappedRow;
+            })} 
+          />
+        </View>
       )}
     </View>
   );
