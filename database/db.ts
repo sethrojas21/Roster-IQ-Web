@@ -1,7 +1,0 @@
-// db.ts
-import { createClient } from "@libsql/client";
-
-export const db = createClient({
-  url: "libsql://rosteriq-sethrojas21.aws-us-west-2.turso.io",
-  authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NTY5NDM5MDksImlkIjoiMWM5ZDQ1NTMtMWQwZS00YTQwLWJiZTYtZTVjMmUxYjBjYjY4IiwicmlkIjoiMDFjNGYyYTctYmRlZC00NTNlLWJiNmMtNGEzZGFhZDUyYTI0In0.VONEyhtlIbxU0AQAipd7AiQkQIQaZ8755J1DmkV2mAshr49kRkBCawMPFgmVtW9gQzBR3OJkJl2F2ao6c8lJBw",
-});

@@ -2,48 +2,73 @@ import PlayerCard from "@/components/testing/home/topplayercard";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 // @ts-ignore
-import { players } from "../data/players";
-
-import TableView from "@/components/testing/home/table";
+import { columns, HomePageRow } from "@/components/testing/home/table/columns";
+import { DataTable } from "@/components/testing/home/table/data-table";
 import { createClient } from "@libsql/client/web";
+import { players } from "../data/players";
 
 export const db = createClient({
   url: "libsql://rosteriq-sethrojas21.aws-us-west-2.turso.io",
   authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NTY5NDM5MDksImlkIjoiMWM5ZDQ1NTMtMWQwZS00YTQwLWJiZTYtZTVjMmUxYjBjYjY4IiwicmlkIjoiMDFjNGYyYTctYmRlZC00NTNlLWJiNmMtNGEzZGFhZDUyYTI0In0.VONEyhtlIbxU0AQAipd7AiQkQIQaZ8755J1DmkV2mAshr49kRkBCawMPFgmVtW9gQzBR3OJkJl2F2ao6c8lJBw",
 });
 
-async function getTransfers() {
+async function getTransfers(): Promise<HomePageRow[]> {
   try {
     const result = await db.execute("SELECT * FROM Home_page");
-    return result.rows; // Access the fetched data
+    
+    return result.rows.map(row => ({
+      season_year: Number(row.season_year),
+      player_name: String(row.player_name),
+      player_id: Number(row.player_id),
+      player_year: Number(row.player_year),
+      team_name: String(row.team_name),
+      position: String(row.position),
+      height_inches: Number(row.height_inches || 0)
+    }));
+
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error("Error fetching transfers:", error);
     throw error;
   }
 }
 
+async function getFakeTransfers(): Promise<HomePageRow[]> {
+  return [
+    {
+      season_year: 2024,
+      player_name: "Caleb Love",
+      player_id: 72413,
+      player_year: 3,
+      team_name: "Arizona",
+      position: "Guard",
+      height_inches: 72
+    }
+  ]
+}
+
 export default function Index() {
-  const [transfers, setTransfers] = useState<any[]>([]);
+  const [data, setData] = useState<HomePageRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchTransfers() {
+    async function fetchData() {
       try {
-        const rows = await getTransfers();
-        setTransfers(rows);
+        const result = await getFakeTransfers();
+        setData(result);
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     }
-    fetchTransfers();
+
+    fetchData();
   }, []);
 
   return (
     <View style={styles.container}>
-      
-      <View style={styles.container}>
+
+      <View style={styles.topSection}>
         <Text style={styles.header}>Top Transfers</Text>
         <ScrollView 
           horizontal
@@ -63,29 +88,14 @@ export default function Index() {
         </ScrollView>
       </View>
       
-      <Text style={styles.header}>Player Search</Text>
-      
-      {loading ? (
-        <ActivityIndicator size="large" color="#fff" style={styles.loader} />
-      ) : (
-        <View style={styles.tableContainer}>
-          <TableView 
-            data={transfers.map(row => {
-              const mappedRow = {
-                season_year: row.season_year,
-                player_name: row.player_name,
-                player_id: row.player_id,
-                player_year: row.player_year,
-                team_name: row.team_name,
-                position: row.position,
-                height_inches: row.height_inches || 0
-              };
-              console.log('Mapped row:', mappedRow);
-              return mappedRow;
-            })} 
-          />
-        </View>
-      )}
+      <View style={[styles.searchSection, styles.side_padding]}>
+        <Text style={[styles.header, {paddingBottom:20}]}>Player Search</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#fff" style={styles.loader} />
+        ) : (
+          <DataTable columns={columns} data={data} page="rankings" />
+        )}
+      </View>
     </View>
   );
 }
@@ -96,18 +106,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
+  topSection: {
+    backgroundColor: '#000',
+    marginBottom: 0,
+  },
+  searchSection: {
+    backgroundColor: '#000',
+    flex: 2,
+  },
+  side_padding: {
+    paddingVertical: 0,
+    paddingHorizontal: 24
+  },
   header: {
-    color: 'white',
+    color: "white",
     fontSize: 24,
     fontWeight: 'bold',
     paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 16,
+    paddingTop: 5,
+    paddingBottom: 8,
     textAlign: 'left',
   },
   scrollContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 20,
+    paddingHorizontal: 24,
+    paddingTop: 0,
+    paddingBottom: 20,
     alignItems: 'center',
   },
   standard: {

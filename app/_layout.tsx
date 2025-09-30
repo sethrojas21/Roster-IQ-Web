@@ -1,4 +1,5 @@
 import Header from "@/components/header/header";
+import "../global.css"
 import { router } from "expo-router";
 import { SafeAreaView, StyleSheet } from "react-native";
 import { Slot } from "expo-router";
