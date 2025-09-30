@@ -1,10 +1,9 @@
-import PlayerCard from "@/components/testing/home/topplayercard";
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
-// @ts-ignore
 import { columns, HomePageRow } from "@/components/testing/home/table/columns";
 import { DataTable } from "@/components/testing/home/table/data-table";
+import PlayerCard from "@/components/testing/home/topplayercard";
 import { createClient } from "@libsql/client/web";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { players } from "../data/players";
 
 export const db = createClient({

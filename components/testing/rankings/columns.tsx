@@ -1,7 +1,3 @@
-import {ColumnDef} from "@tanstack/react-table"
-import { ArrowUpDown } from "lucide-react"
-import { Button } from "@/components/ui/button";
-
 export type RankingsPageRow = {
       player_name: string,
       sim_score: number,
@@ -19,42 +15,63 @@ export type RankingsPageRow = {
       comp_T: number
 }
 
-export const columns: ColumnDef<RankingsPageRow>[] = [
+interface Column<T> {
+  key: string;
+  header: string;
+  accessor: (item: T) => any;
+  sortable?: boolean;
+  width?: number | string;
+  flex?: number;
+}
+
+export const columns: Column<RankingsPageRow>[] = [
     {
-        accessorKey: "player_name",
+        key: "player_name",
         header: "Name",
-        size: 150
+        accessor: (item) => item.player_name,
+        sortable: true,
+        flex: 2
     },
     {
-        accessorKey: "prev_team_name",
-        header: "Previous Team",
-        size: 150
+        key: "prev_team_name",
+        header: "Previous Team", 
+        accessor: (item) => item.prev_team_name,
+        sortable: true,
+        flex: 2
     },
     {
-        accessorKey: "sos_adj_factor",
-        header: "SOS Adjustment Factor",
-        size: 150
+        key: "sos_adj_factor",
+        header: "SOS Adj",
+        accessor: (item) => item.sos_adj_factor.toFixed(3),
+        sortable: true,
+        flex: 1
     }, 
     {
-        accessorKey: "sim_score",
-        size: 150,
-        header: "Fit Score"
+        key: "sim_score",
+        header: "Fit Score",
+        accessor: (item) => item.sim_score.toFixed(3),
+        sortable: true,
+        flex: 1
     },
     {
-        accessorKey: "vocbp",
-        size: 250,
-        header : "Value Over Clustered Benchmark Player"
+        key: "vocbp",
+        header: "VOCBP",
+        accessor: (item) => item.vocbp.toFixed(3),
+        sortable: true,
+        flex: 1
     },
     {
-        accessorKey: "composite_pct",
-        header: "Composite Score Percentile",
-        size: 120
+        key: "composite_pct",
+        header: "Composite %",
+        accessor: (item) => (item.composite_pct * 100).toFixed(1) + '%',
+        sortable: true,
+        flex: 1
     },
     {
-        accessorKey: "comp_T",
-        size: 120,
-        header : "Composite T Score"
+        key: "comp_T",
+        header: "T Score",
+        accessor: (item) => item.comp_T.toFixed(1),
+        sortable: true,
+        flex: 1
     },
-    
-    
 ]

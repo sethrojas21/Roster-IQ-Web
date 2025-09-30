@@ -6,6 +6,7 @@ import { Legend, Pie, PieChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Rada
 import { DataTable } from '@/components/testing/home/table/data-table';
 import { columns } from '@/components/testing/rankings/columns';
 import ArchetypeSplit from '@/components/testing/rankings/archetypesplit';
+import RoundedTextBox from '@/components/testing/rankings/rounded-rectangle';
 
 interface PlayerStats {
   ppg: number;
@@ -129,15 +130,12 @@ export default function Rankings() {
 
         <View>
           <Text style={[styles.subtitle, {color: "white", textAlign:'center'}]}>Player Archetype Split</Text>
-        <PieChart width={300} height={250}>
-          <Pie 
-          data={playerArchetypeSplit} 
-          nameKey="name" 
-          cx="50%" cy="50%" 
-          outerRadius={100} 
-          fill='#8884d8'
-          />
-        </PieChart>
+          <ArchetypeSplit
+                  items={[
+                    { label: "Slasher", percent: 60, color: "blue" },
+                    { label: "Shooter", percent: 40, color: "green" },
+                  ]}
+                />
         </View>
 
         <View>
@@ -154,36 +152,18 @@ export default function Rankings() {
 
         <View>
           <Text style={[styles.subtitle, {color: "white", textAlign:'center'}]}>Team Archetype Split</Text>
-          <PieChart width={300} height={250}>
-            <Pie 
-            data={teamArchetypeSplit} 
-            nameKey="name" 
-            cx="50%" cy="50%" 
-            outerRadius={100} 
-            fill='#8884d8'
-            />
-          </PieChart>
+          <ArchetypeSplit
+            items={[{ label: "Slasher", percent: 100, color: "blue" }]}
+          />
         </View>
       </View>
+      
+      <View style={styles.hStackContainer}>
+        <RoundedTextBox title='Rank:' text='46/403'></RoundedTextBox>
+        <RoundedTextBox title='ESS:' text='39.022'></RoundedTextBox>
+        <RoundedTextBox title='BSS:' text='-0.23'></RoundedTextBox>
 
-
-      <ArchetypeSplit
-        items={[{ label: "Slasher", percent: 100, color: "blue" }]}
-      />
-
-      <ArchetypeSplit
-        items={[
-          { label: "Slasher", percent: 60, color: "blue" },
-          { label: "Shooter", percent: 40, color: "green" },
-        ]}
-      />
-
-      <ArchetypeSplit
-        items={[
-          { label: "Slasher", percent: 90, color: "red" },
-          { label: "Shooter", percent: 10, color: "yellow" },
-        ]}
-      />
+      </View>
 
       
       <DataTable columns={columns} data={rankings_data} page="breakdown" />
@@ -284,6 +264,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
+    gap : 20
   },
   subtitle: {
     fontSize: 24,

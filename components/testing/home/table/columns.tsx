@@ -1,6 +1,3 @@
-import {ColumnDef} from "@tanstack/react-table"
-import { ArrowUpDown } from "lucide-react"
-import { Button } from "@/components/ui/button";
 export type HomePageRow = {
   season_year: number;
   player_name: string;
@@ -11,41 +8,56 @@ export type HomePageRow = {
   height_inches: number;
 };
 
-export const columns: ColumnDef<HomePageRow>[] = [
+interface Column<T> {
+  key: string;
+  header: string;
+  accessor: (item: T) => any;
+  sortable?: boolean;
+  width?: number | string;
+  flex?: number;
+}
+
+export const columns: Column<HomePageRow>[] = [
     {
-        accessorKey : "player_name",
-        header: ({ column }) => {
-            return (
-                <Button
-                variant="ghost"
-                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                >
-                Name
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-            )
-            },
+        key: "player_name",
+        header: "Name",
+        accessor: (item) => item.player_name,
+        sortable: true,
+        flex: 3 // Wider for names
     },
     {
-        accessorKey: "team_name",
-        header: "Previous Team"
+        key: "team_name",
+        header: "Previous Team",
+        accessor: (item) => item.team_name,
+        sortable: true,
+        flex: 3 // Wider for team names
     },
     {
-        accessorKey : "season_year",
-        header : "Season Transfered"
+        key: "season_year",
+        header: "Season Transferred",
+        accessor: (item) => item.season_year,
+        sortable: true,
+        flex: 2 // Medium width
     }, 
     {
-        accessorKey: "player_year",
-        header: "Class"
+        key: "player_year",
+        header: "Class",
+        accessor: (item) => item.player_year,
+        sortable: true,
+        flex: 1 // Narrow
     },
     {
-        accessorKey: "position",
-        header: "Position"
+        key: "position",
+        header: "Position",
+        accessor: (item) => item.position,
+        sortable: true,
+        flex: 2 // Medium width
     },
     {
-        accessorKey: "height_inches",
-        header: "Height (in)"
+        key: "height_inches",
+        header: "Height",
+        accessor: (item) => `${Math.floor(item.height_inches / 12)}'${item.height_inches % 12}"`,
+        sortable: true,
+        flex: 1 // Narrow for height
     },
-    
-    
 ]
