@@ -1,19 +1,29 @@
-import { useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from "expo-linear-gradient";
-import { Legend, Pie, PieChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from 'recharts';
 import { DataTable } from '@/components/testing/home/table/data-table';
-import { columns } from '@/components/testing/rankings/columns';
 import ArchetypeSplit from '@/components/testing/rankings/archetypesplit';
+import { columns } from '@/components/testing/rankings/columns';
 import RoundedTextBox from '@/components/testing/rankings/rounded-rectangle';
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Cell, Legend, Pie, PieChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from 'recharts';
 
-interface PlayerStats {
-  ppg: number;
-  rpg: number;
-  apg: number;
-  // add more stats as needed
-}
+type RankingCardProp = {
+  player_name : string,
+  sim_score : number,
+  prev_team_name : string,
+  vocbp_raw : number,
+  sos_adj_factor : number,
+  sos_z : number,
+  vocbp : number,
+  fit_z : number,
+  value_z : number,
+  comp_raw : number,
+  fit_pct : number,
+  value_pct : number,
+  composite_pct : number,
+  comp_T: number
+};
 
 const rankings_data = [
       {
@@ -70,33 +80,37 @@ export default function Rankings() {
   const params = useLocalSearchParams();
   const { teamName, playerName, seasonYear, playerId, position } = params;
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<PlayerStats | null>(null);
+  const [stats, setStats] = useState<RankingCardProp | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // useEffect(() => {
-  //   fetchPlayerStats();
-  // }, [playerId, seasonYear]);
+  const uvicorn_api = `http://127.0.0.1:8000/histcompute?team_name=${teamName}&season_year=${seasonYear}&player_id_to_replace=${playerId}`
+  const amz_api = `https://rosteriq-931958912273.us-west1.run.app/histcompute?team_name=${teamName}&season_year=${seasonYear}&player_id_to_replace=${playerId}`
 
-  // const fetchPlayerStats = async () => {
-  //   try {
-  //     // Example API URL - replace with your actual API endpoint
-  //     const response = await fetch(
-  //       `https://rosteriq-931958912273.us-west1.run.app/compute?team_name=${teamName}&season_year=${seasonYear}&player_id_to_replace=${playerId}`
-  //     );
+  useEffect(() => {
+    fetchPlayerStats();
+  }, [playerId, seasonYear]);
+
+  const fetchPlayerStats = async () => {
+    try {
+      // Example API URL - replace with your actual API endpoint
+      const response = await fetch(uvicorn_api);
       
-  //     if (!response.ok) {
-  //       throw new Error('Failed to fetch player stats');
-  //     }
 
-  //     const data = await response.json();
-  //     setStats(data.data[0] || null);
-  //   } catch (err) {
-  //     setError(err instanceof Error ? err.message : 'An error occurred');
-  //     console.error('Error fetching player stats:', err);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch player stats');
+      }
+
+      const data = await response.json();
+      setStats(data.data[0] || null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error fetching player stats:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   return (
@@ -130,12 +144,36 @@ export default function Rankings() {
 
         <View>
           <Text style={[styles.subtitle, {color: "white", textAlign:'center'}]}>Player Archetype Split</Text>
-          <ArchetypeSplit
-                  items={[
-                    { label: "Slasher", percent: 60, color: "blue" },
-                    { label: "Shooter", percent: 40, color: "green" },
-                  ]}
+          <PieChart width={300} height={250}>
+            <Pie 
+              data={playerArchetypeSplit} 
+              dataKey="value"
+              nameKey="name"
+              cx="50%" 
+              cy="50%" 
+              outerRadius={80}
+              innerRadius={20}
+              paddingAngle={2}
+              stroke="#000"
+              strokeWidth={2}
+              animationBegin={0}
+              animationDuration={800}
+            >
+              {playerArchetypeSplit.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={entry.fill}
+                  style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' }}
                 />
+              ))}
+            </Pie>
+            <Legend 
+              verticalAlign="bottom" 
+              height={36}
+              iconType="circle"
+              wrapperStyle={{ color: 'white', fontSize: '14px' }}
+            />
+          </PieChart>
         </View>
 
         <View>
@@ -175,12 +213,14 @@ export default function Rankings() {
 
 const playerArchetypeSplit = [
   {
-    "name": "Shoota",
-    "value": 40
+    "name": "Slasher",
+    "value": 65,
+    "fill": "#8A5CF6" // Purple gradient color
   },
   {
-    "name": "Boota",
-    "value": 60
+    "name": "Shooter", 
+    "value": 35,
+    "fill": "#FFFFFF" // White
   }
 ]
 

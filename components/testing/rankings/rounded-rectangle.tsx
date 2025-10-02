@@ -31,12 +31,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 20,
     borderRadius: 15, // Adjust this value for more or less rounded corners
-    width : 200,
+    width : 300,
     marginBottom : 30,
   },
   titleText : {
     color: 'purple', // Text color
-    fontSize: 30,
+    fontSize: 25,
     fontWeight: 'bold',
     
   },

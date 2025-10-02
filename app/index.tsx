@@ -4,6 +4,7 @@ import PlayerCard from "@/components/testing/home/topplayercard";
 import { createClient } from "@libsql/client/web";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import webHomepageJson from "../assets/data/web_homepage.json";
 import { players } from "../data/players";
 
 export const db = createClient({
@@ -31,6 +32,7 @@ async function getTransfers(): Promise<HomePageRow[]> {
   }
 }
 
+
 async function getFakeTransfers(): Promise<HomePageRow[]> {
   return [
     {
@@ -45,6 +47,20 @@ async function getFakeTransfers(): Promise<HomePageRow[]> {
   ]
 }
 
+async function getStaticTransfers(): Promise<HomePageRow[]> {
+  // webHomepageJson is expected to be an array of row objects
+  const rows = (webHomepageJson as any[]) || [];
+  return rows.map((r: any) => ({
+    season_year: Number(r.season_year),
+    player_name: String(r.player_name),
+    player_id: Number(r.player_id),
+    player_year: Number(r.player_year),
+    team_name: String(r.team_name),
+    position: String(r.position),
+    height_inches: Number(r.height_inches ?? 0),
+  }));
+}
+
 export default function Index() {
   const [data, setData] = useState<HomePageRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +68,7 @@ export default function Index() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const result = await getFakeTransfers();
+        const result = await getStaticTransfers();
         setData(result);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -65,8 +81,7 @@ export default function Index() {
   }, []);
 
   return (
-    <View style={styles.container}>
-
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={true}>
       <View style={styles.topSection}>
         <Text style={styles.header}>Top Transfers</Text>
         <ScrollView 
@@ -87,7 +102,7 @@ export default function Index() {
         </ScrollView>
       </View>
       
-      <View style={[styles.searchSection, styles.side_padding]}>
+      <View style={[styles.searchSection, styles.side_padding, {padding : 20}]}>
         <Text style={[styles.header, {paddingBottom:20}]}>Player Search</Text>
         {loading ? (
           <ActivityIndicator size="large" color="#fff" style={styles.loader} />
@@ -95,7 +110,7 @@ export default function Index() {
           <DataTable columns={columns} data={data} page="rankings" />
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -111,7 +126,7 @@ const styles = StyleSheet.create({
   },
   searchSection: {
     backgroundColor: '#000',
-    flex: 2,
+    minHeight: 600, // Ensure enough height for the table and pagination
   },
   side_padding: {
     paddingVertical: 0,

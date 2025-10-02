@@ -33,6 +33,9 @@ export function DataTable<T extends Record<string, any>>({
   const [sortField, setSortField] = React.useState<string | null>(null)
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc')
   const [screenData, setScreenData] = React.useState(Dimensions.get('window'))
+  const [currentPage, setCurrentPage] = React.useState(1)
+  
+  const itemsPerPage = 25
 
   // Listen for dimension changes
   React.useEffect(() => {
@@ -73,6 +76,29 @@ export function DataTable<T extends Record<string, any>>({
       return 0;
     });
   }, [data, sortField, sortDirection, allColumns]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedData = sortedData.slice(startIndex, endIndex);
+
+  // Reset to page 1 when data changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [data.length]);
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   const handleSort = (columnKey: string) => {
     const column = allColumns.find(col => col.key === columnKey);
@@ -155,16 +181,16 @@ export function DataTable<T extends Record<string, any>>({
 
           {/* Body */}
           <ScrollView style={styles.bodyContainer} showsVerticalScrollIndicator={false}>
-            {sortedData.length > 0 ? (
-              sortedData.map((item, rowIndex) => (
+            {paginatedData.length > 0 ? (
+              paginatedData.map((item, rowIndex) => (
                 <TouchableOpacity
-                  key={rowIndex}
+                  key={startIndex + rowIndex}
                   style={styles.dataRow}
-                  onPress={() => handleRowPress(item, rowIndex)}
+                  onPress={() => handleRowPress(item, startIndex + rowIndex)}
                 >
                   {allColumns.map((column, colIndex) => (
                     <View
-                      key={`${rowIndex}-${column.key}`}
+                      key={`${startIndex + rowIndex}-${column.key}`}
                       style={[
                         styles.dataCell,
                         { width: getColumnWidth(column, colIndex) }
@@ -175,7 +201,7 @@ export function DataTable<T extends Record<string, any>>({
                         { textAlign: colIndex < numColLeftAligned ? 'left' : 'right' }
                       ]} numberOfLines={2}>
                         {column.key === 'index' 
-                          ? (rowIndex + 1).toString()
+                          ? (startIndex + rowIndex + 1).toString()
                           : String(column.accessor(item) || '')
                         }
                       </Text>
@@ -191,6 +217,40 @@ export function DataTable<T extends Record<string, any>>({
           </ScrollView>
         </View>
       </ScrollView>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            style={[styles.paginationButton, currentPage === 1 && styles.disabledButton]}
+            onPress={goToPreviousPage}
+            disabled={currentPage === 1}
+          >
+            <Text style={[styles.paginationButtonText, currentPage === 1 && styles.disabledButtonText]}>
+              ←
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.paginationInfo}>
+            <Text style={styles.paginationText}>
+              {startIndex + 1}-{Math.min(endIndex, sortedData.length)} of {sortedData.length}
+            </Text>
+            <Text style={styles.paginationPageText}>
+              Page {currentPage} of {totalPages}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.paginationButton, currentPage === totalPages && styles.disabledButton]}
+            onPress={goToNextPage}
+            disabled={currentPage === totalPages}
+          >
+            <Text style={[styles.paginationButtonText, currentPage === totalPages && styles.disabledButtonText]}>
+              →
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -201,8 +261,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(38, 38, 38, 0.8)',
-    backgroundColor: '#030303',
-    maxHeight: 500,
+    backgroundColor: '#030303'
   },
   headerSheen: {
     height: 4,
@@ -266,5 +325,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(163, 163, 163, 1)',
     textAlign: 'center',
+  },
+  // Pagination styles
+  paginationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(23, 23, 23, 0.9)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(64, 64, 64, 0.7)',
+  },
+  paginationButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabledButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  paginationButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'rgba(229, 229, 229, 0.95)',
+  },
+  disabledButtonText: {
+    color: 'rgba(163, 163, 163, 0.5)',
+  },
+  paginationInfo: {
+    alignItems: 'center',
+  },
+  paginationText: {
+    fontSize: 14,
+    color: 'rgba(229, 229, 229, 0.95)',
+    fontWeight: '500',
+  },
+  paginationPageText: {
+    fontSize: 12,
+    color: 'rgba(163, 163, 163, 1)',
+    marginTop: 2,
   },
 });

@@ -1,7 +1,7 @@
 // ArchetypeSplit.tsx
-import React, { useMemo } from "react";
-import { View, Text, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import React, { useMemo } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 type Archetype = {
   label: string;
@@ -171,11 +171,11 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    height: 96,
+    height: 120, // Increased from 96 for more text space
   },
   segment: {
     justifyContent: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: 16, // Increased from 12 for more text padding
     shadowColor: "#000",
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   },
   segTitle: {
     color: "rgba(255,255,255,0.9)",
-    fontSize: 16,
+    fontSize: 18, // Increased from 16 for bigger text
     fontWeight: "700",
   },
   segTitleMajor: {
@@ -193,19 +193,19 @@ const styles = StyleSheet.create({
   percentRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 16, // Increased from 12 to match segment padding
+    paddingVertical: 12, // Increased from 10 for better proportion
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(255,255,255,0.08)",
   },
   percentText: {
     color: "rgba(255,255,255,0.9)",
-    fontSize: 13,
+    fontSize: 15, // Increased from 13 for better readability
     fontWeight: "700",
   },
   percentTextRight: {
     color: "rgba(255,255,255,0.9)",
-    fontSize: 13,
+    fontSize: 15, // Increased from 13 for consistency
     fontWeight: "700",
     textAlign: "right",
   },
