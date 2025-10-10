@@ -2,7 +2,7 @@
 
 import { router } from "expo-router"
 import * as React from "react"
-import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Dimensions, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
 import { RankingsPageRow } from "../../rankings/columns"
 import { HomePageRow } from "./columns"
 
@@ -34,6 +34,9 @@ export function DataTable<T extends Record<string, any>>({
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc')
   const [screenData, setScreenData] = React.useState(Dimensions.get('window'))
   const [currentPage, setCurrentPage] = React.useState(1)
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [searchColumn, setSearchColumn] = React.useState<string>('all')
+  const [showSearchDropdown, setShowSearchDropdown] = React.useState(false)
   
   const itemsPerPage = 25
 
@@ -60,14 +63,44 @@ export function DataTable<T extends Record<string, any>>({
     return [indexColumn, ...columns];
   }, [columns, showIndex]);
 
+  // Search options for dropdown
+  const searchOptions = React.useMemo(() => {
+    const options = [{ key: 'all', label: 'All Columns' }];
+    columns.forEach(column => {
+      options.push({ key: column.key, label: column.header });
+    });
+    return options;
+  }, [columns]);
+
+  // Filter data based on search
+  const filteredData = React.useMemo(() => {
+    if (!searchQuery.trim()) return data;
+    
+    return data.filter(item => {
+      if (searchColumn === 'all') {
+        // Search across all columns
+        return columns.some(column => {
+          const value = column.accessor(item);
+          return String(value).toLowerCase().includes(searchQuery.toLowerCase());
+        });
+      } else {
+        // Search specific column
+        const column = columns.find(col => col.key === searchColumn);
+        if (!column) return false;
+        const value = column.accessor(item);
+        return String(value).toLowerCase().includes(searchQuery.toLowerCase());
+      }
+    });
+  }, [data, searchQuery, searchColumn, columns]);
+
   // Sort data
   const sortedData = React.useMemo(() => {
-    if (!sortField) return data;
+    if (!sortField) return filteredData;
     
     const column = allColumns.find(col => col.key === sortField);
-    if (!column) return data;
+    if (!column) return filteredData;
 
-    return [...data].sort((a, b) => {
+    return [...filteredData].sort((a, b) => {
       const aVal = column.accessor(a);
       const bVal = column.accessor(b);
       
@@ -75,7 +108,7 @@ export function DataTable<T extends Record<string, any>>({
       if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [data, sortField, sortDirection, allColumns]);
+  }, [filteredData, sortField, sortDirection, allColumns]);
 
   // Pagination calculations
   const totalPages = Math.ceil(sortedData.length / itemsPerPage);
@@ -83,10 +116,10 @@ export function DataTable<T extends Record<string, any>>({
   const endIndex = startIndex + itemsPerPage;
   const paginatedData = sortedData.slice(startIndex, endIndex);
 
-  // Reset to page 1 when data changes
+  // Reset to page 1 when data or search changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [data.length]);
+  }, [data.length, searchQuery, searchColumn]);
 
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -149,6 +182,65 @@ export function DataTable<T extends Record<string, any>>({
     <View style={styles.container}>
       {/* Header sheen */}
       <View style={styles.headerSheen} />
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search..."
+            placeholderTextColor="rgba(163, 163, 163, 0.7)"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+        
+        <TouchableOpacity
+          style={styles.searchFilterButton}
+          onPress={() => setShowSearchDropdown(!showSearchDropdown)}
+        >
+          <Text style={styles.searchFilterText}>
+            {searchOptions.find(opt => opt.key === searchColumn)?.label || 'All'}
+          </Text>
+          <Text style={styles.dropdownArrow}>▼</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Dropdown */}
+      {showSearchDropdown && (
+        <>
+          {/* Overlay to catch outside taps */}
+          <TouchableOpacity 
+            style={styles.searchDropdownOverlay}
+            onPress={() => setShowSearchDropdown(false)}
+            activeOpacity={1}
+          />
+          <View style={styles.searchDropdown}>
+            <ScrollView style={styles.searchDropdownScroll} showsVerticalScrollIndicator={true}>
+              {searchOptions.map(option => (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[
+                    styles.searchDropdownItem,
+                    searchColumn === option.key && styles.searchDropdownItemActive
+                  ]}
+                  onPress={() => {
+                    setSearchColumn(option.key);
+                    setShowSearchDropdown(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.searchDropdownText,
+                    searchColumn === option.key && styles.searchDropdownTextActive
+                  ]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </>
+      )}
 
       <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
         <View style={[styles.tableContainer, { minWidth: screenData.width - 50 }]}>
@@ -266,6 +358,89 @@ const styles = StyleSheet.create({
   headerSheen: {
     height: 4,
     backgroundColor:'rgba(23, 23, 23, 0.9)'
+  },
+  // Search styles
+  searchContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: 'rgba(23, 23, 23, 0.9)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(64, 64, 64, 0.7)',
+    gap: 12,
+  },
+  searchInputContainer: {
+    flex: 1,
+  },
+  searchInput: {
+    height: 44,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: 'rgba(229, 229, 229, 0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(64, 64, 64, 0.5)',
+  },
+  searchFilterButton: {
+    height: 44,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(64, 64, 64, 0.5)',
+    minWidth: 120,
+  },
+  searchFilterText: {
+    fontSize: 14,
+    color: 'rgba(229, 229, 229, 0.95)',
+    fontWeight: '500',
+  },
+  dropdownArrow: {
+    fontSize: 10,
+    color: 'rgba(163, 163, 163, 1)',
+  },
+  searchDropdown: {
+    backgroundColor: 'rgba(23, 23, 23, 0.95)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(64, 64, 64, 0.7)',
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: 'rgba(64, 64, 64, 0.5)',
+    maxHeight: 250,
+    position: 'relative',
+    zIndex: 1000,
+  },
+  searchDropdownOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+  },
+  searchDropdownScroll: {
+    maxHeight: 250,
+  },
+  searchDropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(64, 64, 64, 0.3)',
+  },
+  searchDropdownItemActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  searchDropdownText: {
+    fontSize: 14,
+    color: 'rgba(229, 229, 229, 0.95)',
+  },
+  searchDropdownTextActive: {
+    color: 'rgba(163, 163, 163, 1)',
+    fontWeight: '600',
   },
   tableContainer: {
     flex: 1,

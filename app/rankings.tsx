@@ -1,115 +1,221 @@
 import { DataTable } from '@/components/testing/home/table/data-table';
-import ArchetypeSplit from '@/components/testing/rankings/archetypesplit';
 import { columns } from '@/components/testing/rankings/columns';
 import RoundedTextBox from '@/components/testing/rankings/rounded-rectangle';
+import { roundToDecimal } from '@/helpers';
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Cell, Legend, Pie, PieChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from 'recharts';
 
-type RankingCardProp = {
-  player_name : string,
-  sim_score : number,
-  prev_team_name : string,
-  vocbp_raw : number,
-  sos_adj_factor : number,
-  sos_z : number,
-  vocbp : number,
-  fit_z : number,
-  value_z : number,
-  comp_raw : number,
-  fit_pct : number,
-  value_pct : number,
-  composite_pct : number,
-  comp_T: number
-};
+// Style & fit stats
+interface FsStats {
+  usg_percent: number;
+  threeRate: number;
+  ast_fga: number;
+  fga_per100: number;
+  ftr: number;
+  rimRate: number;
+  midRate: number;
+}
 
-const rankings_data = [
-      {
-      "player_name": "Demarcus Sharp",
-      "sim_score": 0.94,
-      "prev_team_name": "Northwestern State",
-      "vocbp_raw": 1.52,
-      "sos_adj_factor": 0,
-      "sos_z": -1.15,
-      "vocbp": 1.52,
-      "fit_z": 1.72,
-      "value_z": 2.48,
-      "comp_raw": 2.02,
-      "fit_pct": 0.99,
-      "value_pct": 0.99,
-      "composite_pct": 0.99,
-      "comp_T": 76.18
-    },
-    {
-            "player_name": "RJ Luis",
-      "sim_score": 0.779281181085735,
-      "prev_team_name": "Massachusetts",
-      "vocbp_raw": 1.3334176485421,
-      "sos_adj_factor": 0.0264101884994319,
-      "sos_z": 0.26410188499432,
-      "vocbp": 1.35982783704153,
-      "fit_z": 1.46843173801353,
-      "value_z": 2.22765015064131,
-      "comp_raw": 1.77211910306464,
-      "fit_pct": 0.967391304347826,
-      "value_pct": 0.984782608695652,
-      "composite_pct": 0.974347826086957,
-      "comp_T": 72.9139825119946
-    },
-    {
-            "player_name": "RJ Luis",
-      "sim_score": 0.779281181085735,
-      "prev_team_name": "Massachusetts",
-      "vocbp_raw": 1.3334176485421,
-      "sos_adj_factor": 0.0264101884994319,
-      "sos_z": 0.26410188499432,
-      "vocbp": 1.35982783704153,
-      "fit_z": 1.46843173801353,
-      "value_z": 2.22765015064131,
-      "comp_raw": 1.77211910306464,
-      "fit_pct": 0.967391304347826,
-      "value_pct": 0.984782608695652,
-      "composite_pct": 0.974347826086957,
-      "comp_T": 72.9139825119946
-    }
-]
+// Value stats (VOCBP)
+interface VocbpStats {
+  ast_percent: number;
+  oreb_percent: number;
+  dreb_percent: number;
+  ft_percent: number;
+  stl_percent: number;
+  blk_percent: number;
+  ts_percent: number;
+}
+
+// Success stats
+interface SuccStats {
+  ts_percent: number;
+  porpag: number;
+  dporpag: number;
+  ast_percent?: number;
+  dreb_percent: number;
+  oreb_percent?: number;
+  stl_percent?: number;
+  blk_percent?: number;
+}
+
+interface CompositeScoreItem {
+  player_name: string;
+  sim_score: number;
+  prev_team_name: string;
+  vocbp_raw: number;
+  sos_adj_factor: number;
+  sos_z: number;
+  vocbp: number;
+  fit_z: number;
+  value_z: number;
+  comp_raw: number;
+  fit_pct: number;
+  value_pct: number;
+  composite_pct: number;
+  comp_T: number;
+}
+
+interface ApiResponse {
+  fs_bmark: FsStats;
+  fs_bmark_scaled: FsStats;
+  fs_plyr: FsStats;
+  fs_plyr_scaled: FsStats;
+  vocbp_bmark: VocbpStats;
+  vocbp_bmark_scaled: VocbpStats;
+  vocbp_plyr: VocbpStats;
+  vocbp_plyr_scaled: VocbpStats;
+  rank? : number,
+  bss: number;
+  ess: number;
+  succ_bmark: SuccStats;
+  succ_bmark_scaled: SuccStats;
+  succ_plyr: SuccStats;
+  succ_plyr_scaled: SuccStats;
+  player_archetype_names: string[];
+  player_archetype_percentages: number[];
+  team_archetype: string[];
+  composite_scores: CompositeScoreItem[]; // ⬅️ new
+}
 
 export default function Rankings() {
   const params = useLocalSearchParams();
   const { teamName, playerName, seasonYear, playerId, position } = params;
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<RankingCardProp | null>(null);
+  const [stats, setStats] = useState<CompositeScoreItem[]>([]);
+  const [bss, setBSS] = useState(0);
+  const [ess, setESS] = useState(0);
+  const [succ_bmark_scaled, setSuccBmarkScaled] = useState<SuccStats | null>(null);
+  const [succ_plyr_scaled, setSuccPlyrScaled] = useState<SuccStats | null>(null);
+  const [playerArchetypeNames, setPlayerArchetypeNames] = useState<string[]>([]);
+  const [playerArchetypePercentages, setPlayerArchetypePercentages] = useState<number[]>([]);
+  const [teamArchetype, setTeamArchetype] = useState<string[]>([]);
+  const [rank, setRank] = useState('--/--');
   const [error, setError] = useState<string | null>(null);
 
-  const uvicorn_api = `http://127.0.0.1:8000/histcompute?team_name=${teamName}&season_year=${seasonYear}&player_id_to_replace=${playerId}`
-  const amz_api = `https://rosteriq-931958912273.us-west1.run.app/histcompute?team_name=${teamName}&season_year=${seasonYear}&player_id_to_replace=${playerId}`
-
-  useEffect(() => {
-    fetchPlayerStats();
-  }, [playerId, seasonYear]);
-
+  const teamNameString = Array.isArray(teamName) ? teamName[0] : teamName;
+  const uvicorn_api = `http://localhost:8080/histcompute?team_name=${teamNameString.replace(/\s/g, "_")}&season_year=${seasonYear}&player_id_to_replace=${playerId}`
+  const amz_api = `https://rosteriq-931958912273.us-west1.run.app/histcompute?team_name=${teamNameString}&season_year=${seasonYear}&player_id_to_replace=${playerId}`
+  
   const fetchPlayerStats = async () => {
     try {
-      // Example API URL - replace with your actual API endpoint
+      console.log('🚀 Fetching API data...');
+      console.log('Team Name:', teamName);
+      console.log('Season Year:', seasonYear);
+      console.log('Player ID:', playerId);
+      console.log('API URL:', uvicorn_api);
+      
       const response = await fetch(uvicorn_api);
-      
+      console.log('📊 Response status:', response.status);
+      console.log('📊 Response headers:', response.headers);
 
-
-      
       if (!response.ok) {
-        throw new Error('Failed to fetch player stats');
+        throw new Error(`Failed to fetch player stats (Status: ${response.status})`);
       }
-
-      const data = await response.json();
-      setStats(data.data[0] || null);
+      
+      const data: ApiResponse = await response.json();
+      console.log('✅ API Response received:', data);
+      setStats(data.composite_scores);
+      setBSS(data.bss);
+      setESS(data.ess);
+      setSuccBmarkScaled(data.succ_bmark_scaled)
+      setSuccPlyrScaled(data.succ_plyr_scaled)
+      setPlayerArchetypeNames(data.player_archetype_names);
+      setPlayerArchetypePercentages(data.player_archetype_percentages);
+      setTeamArchetype(data.team_archetype);
+      
+      // Calculate rank: find the position of the replaced player among all players
+      if (data.composite_scores && data.composite_scores.length > 0) {
+        const totalPlayers = data.composite_scores.length;
+        const rank_num = data.rank
+        // The rank would be the player's position + 1 (since arrays are 0-indexed)
+        // For now, let's assume the first player is the replaced player or use a default rank
+        setRank(`${rank_num}/${totalPlayers}`);
+      } else {
+        setRank('--/--');
+      }
+      
+      setError(null); // Clear any previous errors
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      console.error('Error fetching player stats:', err);
+      let errorMessage = 'An error occurred';
+      
+      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+        errorMessage = 'CORS Error: Your API server needs "Access-Control-Allow-Origin" headers. Make sure your uvicorn server allows requests from http://localhost:8081';
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      console.error('❌ Error fetching player stats:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchPlayerStats();
+  }, [teamName, seasonYear, playerId]);
+
+  const getSuccessData = () => {
+
+    return [
+      {
+        subject: "TS%",
+        benchmark: succ_bmark_scaled?.ts_percent,
+        player: succ_plyr_scaled?.ts_percent
+      },
+      {
+        subject: "PORPAG",
+        benchmark: succ_bmark_scaled?.porpag,
+        player: succ_plyr_scaled?.porpag
+      },
+      {
+        subject: "DPORPAG",
+        benchmark: succ_bmark_scaled?.dporpag,
+        player: succ_plyr_scaled?.dporpag,
+      },
+      {
+        subject: "DReb%",
+        benchmark: succ_bmark_scaled?.dreb_percent,
+        player: succ_plyr_scaled?.dreb_percent
+      },
+      {
+        subject: "AST%",
+        benchmark: succ_bmark_scaled?.ast_percent,
+        player: succ_plyr_scaled?.ast_percent
+      },
+      {
+        subject: "STL%",
+        benchmark: succ_bmark_scaled?.stl_percent,
+        player: succ_plyr_scaled?.stl_percent
+      }
+    ];
+  };
+
+  const getPlayerArchetypeData = () => {
+    if (playerArchetypeNames.length === 0 || playerArchetypePercentages.length === 0) {
+      // Return default data if archetype data hasn't loaded yet
+      return [
+        {
+          name: "Loading...",
+          value: 100,
+          fill: "#8A5CF6"
+        }
+      ];
+    }
+
+    // Generate colors for each archetype
+    const colors = ["#8A5CF6", "#FFFFFF", "#FF5C97", "#FF7A59", "#82ca9d"];
+    
+    return playerArchetypeNames.map((name, index) => ({
+      name: name,
+      value: Math.round(playerArchetypePercentages[index] * 100), // Convert to percentage
+      fill: colors[index % colors.length]
+    }));
   };
 
 
@@ -142,11 +248,11 @@ export default function Rankings() {
     
       <View style={styles.hStackContainer}>
 
-        <View>
+        <View style={styles.chartContainer}>
           <Text style={[styles.subtitle, {color: "white", textAlign:'center'}]}>Player Archetype Split</Text>
-          <PieChart width={300} height={250}>
+          <PieChart width={300} height={300}>
             <Pie 
-              data={playerArchetypeSplit} 
+              data={getPlayerArchetypeData()} 
               dataKey="value"
               nameKey="name"
               cx="50%" 
@@ -159,7 +265,7 @@ export default function Rankings() {
               animationBegin={0}
               animationDuration={800}
             >
-              {playerArchetypeSplit.map((entry, index) => (
+              {getPlayerArchetypeData().map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
                   fill={entry.fill}
@@ -176,99 +282,50 @@ export default function Rankings() {
           </PieChart>
         </View>
 
-        <View>
+        <View style={styles.chartContainer}>
           <Text style={[styles.subtitle, {color: "white", textAlign:'center'}]}>Success Breakdown</Text>
-        <RadarChart outerRadius={90} width={300} height={250} data={data}>
-          <PolarGrid />
-          <PolarAngleAxis dataKey="subject" />
-          <PolarRadiusAxis angle={30} domain={[0, 150]} />
-          <Radar name="Mike" dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-          <Radar name="Lily" dataKey="B" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
-          <Legend />
-        </RadarChart>
+          <RadarChart outerRadius={80} width={300} height={300} data={getSuccessData()}>
+            <PolarGrid />
+            <PolarAngleAxis dataKey="subject" />
+            <PolarRadiusAxis angle={30}/>
+            <Radar name="Benchmark" dataKey="benchmark" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+            <Radar name="Player" dataKey="player" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
+            <Legend />
+          </RadarChart>
         </View>
 
-        <View>
-          <Text style={[styles.subtitle, {color: "white", textAlign:'center'}]}>Team Archetype Split</Text>
-          <ArchetypeSplit
-            items={[{ label: "Slasher", percent: 100, color: "blue" }]}
-          />
+        <View style={styles.chartContainer}>
+          <Text style={[styles.subtitle, {color: "white", textAlign:'center'}]}>Team Archetype</Text>
+          <View style={styles.chartPlaceholder}>
+            <View style={styles.teamArchetypeContainer}>
+              {teamArchetype.length > 0 ? (
+                teamArchetype.map((archetype, index) => (
+                  <Text key={index} style={styles.teamArchetypeText}>
+                    {archetype}
+                  </Text>
+                ))
+              ) : (
+                <Text style={styles.teamArchetypeText}>Loading...</Text>
+              )}
+            </View>
+          </View>
         </View>
       </View>
       
       <View style={styles.hStackContainer}>
-        <RoundedTextBox title='Rank:' text='46/403'></RoundedTextBox>
-        <RoundedTextBox title='ESS:' text='39.022'></RoundedTextBox>
-        <RoundedTextBox title='BSS:' text='-0.23'></RoundedTextBox>
+        <RoundedTextBox title='Rank:' text={rank}></RoundedTextBox>
+        <RoundedTextBox title='ESS:' text={String(roundToDecimal(ess, 3))}></RoundedTextBox>
+        <RoundedTextBox title='BSS:' text={String(roundToDecimal(bss, 3))}></RoundedTextBox>
 
       </View>
 
       
-      <DataTable columns={columns} data={rankings_data} page="breakdown" />
+      <DataTable columns={columns} data={stats} page="breakdown" />
       
       </View>
     </ScrollView>
   );
 }
-
-const playerArchetypeSplit = [
-  {
-    "name": "Slasher",
-    "value": 65,
-    "fill": "#8A5CF6" // Purple gradient color
-  },
-  {
-    "name": "Shooter", 
-    "value": 35,
-    "fill": "#FFFFFF" // White
-  }
-]
-
-const teamArchetypeSplit = [
-  {
-    "name" : "Rebounda",
-    "value" : 100
-  }
-]
-
-const data = [
-  {
-    "subject": "Math",
-    "A": 120,
-    "B": 110,
-    "fullMark": 150
-  },
-  {
-    "subject": "Chinese",
-    "A": 98,
-    "B": 130,
-    "fullMark": 150
-  },
-  {
-    "subject": "English",
-    "A": 86,
-    "B": 130,
-    "fullMark": 150
-  },
-  {
-    "subject": "Geography",
-    "A": 99,
-    "B": 100,
-    "fullMark": 150
-  },
-  {
-    "subject": "Physics",
-    "A": 85,
-    "B": 90,
-    "fullMark": 150
-  },
-  {
-    "subject": "History",
-    "A": 65,
-    "B": 85,
-    "fullMark": 150
-  }
-]
 
 const styles = StyleSheet.create({
   container: {
@@ -284,6 +341,32 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     width: "100%",
     alignItems: "center",
+  },
+  chartContainer: {
+    alignItems: "center",
+    width: 300,
+    minHeight: 360, // Consistent height for all charts including title
+  },
+  chartPlaceholder: {
+    width: 300,
+    height: 300,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  teamArchetypeContainer: {
+    padding: 20,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 200,
+  },
+  teamArchetypeText: {
+    color: "white",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 8,
+    lineHeight: 24,
   },
   boxTitle: {
     color: "orange",
