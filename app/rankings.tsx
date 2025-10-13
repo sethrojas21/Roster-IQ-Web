@@ -1,85 +1,13 @@
+import { CompositeScoreItem, HistComputeApiResponse, SuccStats } from '@/api/histcomputeapi';
 import { DataTable } from '@/components/testing/home/table/data-table';
 import { columns } from '@/components/testing/rankings/columns';
 import RoundedTextBox from '@/components/testing/rankings/rounded-rectangle';
+import GradientTitle from '@/components/ui/gradient-title';
 import { roundToDecimal } from '@/helpers';
-import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Cell, Legend, Pie, PieChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from 'recharts';
-
-// Style & fit stats
-interface FsStats {
-  usg_percent: number;
-  threeRate: number;
-  ast_fga: number;
-  fga_per100: number;
-  ftr: number;
-  rimRate: number;
-  midRate: number;
-}
-
-// Value stats (VOCBP)
-interface VocbpStats {
-  ast_percent: number;
-  oreb_percent: number;
-  dreb_percent: number;
-  ft_percent: number;
-  stl_percent: number;
-  blk_percent: number;
-  ts_percent: number;
-}
-
-// Success stats
-interface SuccStats {
-  ts_percent: number;
-  porpag: number;
-  dporpag: number;
-  ast_percent?: number;
-  dreb_percent: number;
-  oreb_percent?: number;
-  stl_percent?: number;
-  blk_percent?: number;
-}
-
-interface CompositeScoreItem {
-  player_name: string;
-  sim_score: number;
-  prev_team_name: string;
-  vocbp_raw: number;
-  sos_adj_factor: number;
-  sos_z: number;
-  vocbp: number;
-  fit_z: number;
-  value_z: number;
-  comp_raw: number;
-  fit_pct: number;
-  value_pct: number;
-  composite_pct: number;
-  comp_T: number;
-}
-
-interface ApiResponse {
-  fs_bmark: FsStats;
-  fs_bmark_scaled: FsStats;
-  fs_plyr: FsStats;
-  fs_plyr_scaled: FsStats;
-  vocbp_bmark: VocbpStats;
-  vocbp_bmark_scaled: VocbpStats;
-  vocbp_plyr: VocbpStats;
-  vocbp_plyr_scaled: VocbpStats;
-  rank? : number,
-  bss: number;
-  ess: number;
-  succ_bmark: SuccStats;
-  succ_bmark_scaled: SuccStats;
-  succ_plyr: SuccStats;
-  succ_plyr_scaled: SuccStats;
-  player_archetype_names: string[];
-  player_archetype_percentages: number[];
-  team_archetype: string[];
-  composite_scores: CompositeScoreItem[]; // ⬅️ new
-}
 
 export default function Rankings() {
   const params = useLocalSearchParams();
@@ -95,6 +23,7 @@ export default function Rankings() {
   const [teamArchetype, setTeamArchetype] = useState<string[]>([]);
   const [rank, setRank] = useState('--/--');
   const [error, setError] = useState<string | null>(null);
+  const [fullApiResponse, setFullApiResponse] = useState<HistComputeApiResponse | null>(null);
 
   const teamNameString = Array.isArray(teamName) ? teamName[0] : teamName;
   const uvicorn_api = `http://localhost:8080/histcompute?team_name=${teamNameString.replace(/\s/g, "_")}&season_year=${seasonYear}&player_id_to_replace=${playerId}`
@@ -116,8 +45,12 @@ export default function Rankings() {
         throw new Error(`Failed to fetch player stats (Status: ${response.status})`);
       }
       
-      const data: ApiResponse = await response.json();
+      const data: HistComputeApiResponse = await response.json();
       console.log('✅ API Response received:', data);
+      
+      // Store the full API response
+      setFullApiResponse(data);
+      
       setStats(data.composite_scores);
       setBSS(data.bss);
       setESS(data.ess);
@@ -130,7 +63,7 @@ export default function Rankings() {
       // Calculate rank: find the position of the replaced player among all players
       if (data.composite_scores && data.composite_scores.length > 0) {
         const totalPlayers = data.composite_scores.length;
-        const rank_num = data.rank
+        const rank_num = String(Number(data.rank) + 1)
         // The rank would be the player's position + 1 (since arrays are 0-indexed)
         // For now, let's assume the first player is the replaced player or use a default rank
         setRank(`${rank_num}/${totalPlayers}`);
@@ -223,33 +156,20 @@ export default function Rankings() {
     <ScrollView style={{ flex: 1, backgroundColor: "#000" }}>
       <View style={styles.container}>
 
-        <View style={styles.titleBox}>
-        
-        <View>
-          <LinearGradient
-            colors={["#8A5CF6", "#FF5C97", "#FF7A59"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: 20}}
-          />
-          <Text style={[styles.title, { backgroundColor: 'transparent', padding: 10 }]}>{playerName}</Text>
-        </View>
-
-        <View style={styles.hStackContainer}>
-          <Text style={styles.subtitle}>{teamName}</Text>
-          <Text style={styles.bulletPoint}> - </Text>
-          <Text style={styles.subtitle}>{position}</Text>
-          <Text style={styles.bulletPoint}> - </Text>
-          <Text style={styles.subtitle}>{seasonYear}</Text>
-        </View>
-      </View>
+        <GradientTitle 
+          title={playerName as string}
+          teamName={teamName as string}
+          position={position as string}
+          seasonYear={seasonYear as string}
+          showMetadata={true}
+        />
 
 
     
       <View style={styles.hStackContainer}>
 
         <View style={styles.chartContainer}>
-          <Text style={[styles.subtitle, {color: "white", textAlign:'center'}]}>Player Archetype Split</Text>
+          <Text style={[styles.subtitle, {color: "white", textAlign:'center'}]}>Player Archetype</Text>
           <PieChart width={300} height={300}>
             <Pie 
               data={getPlayerArchetypeData()} 
@@ -320,7 +240,16 @@ export default function Rankings() {
       </View>
 
       
-      <DataTable columns={columns} data={stats} page="breakdown" />
+      <DataTable 
+        columns={columns} 
+        data={stats} 
+        page="breakdown" 
+        apiResponse={fullApiResponse}
+        teamName={teamName as string}
+        position={position as string}
+        seasonYear={seasonYear as string}
+        playerName={playerName as string}
+      />
       
       </View>
     </ScrollView>
@@ -332,14 +261,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000",
     padding: 20,
-    alignItems: "center",
-  },
-  titleBox: {
-    backgroundColor: "rgba(255,255,255,0.05)",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    width: "100%",
     alignItems: "center",
   },
   chartContainer: {
@@ -375,13 +296,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
   },
-  title: {
-    fontSize: 40,
-    fontWeight: "bold",
-    color: "white",
-    marginBottom: 4,
-    textAlign: "center",
-  },
   hStackContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -392,10 +306,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 24,
     color: "white",
-  },
-  bulletPoint: {
-    color: "purple",
-    fontSize: 30,
   },
   loader: {
     marginTop: 20,

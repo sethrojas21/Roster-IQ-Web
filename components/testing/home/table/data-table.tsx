@@ -21,14 +21,26 @@ interface DataTableProps<T> {
   page: string
   showIndex?: boolean,
   numColLeftAligned?: number
+  showSearchBar?: boolean // Optional parameter to show/hide search bar (default: true)
+  apiResponse?: any // Optional API response data to pass to breakdown
+  teamName?: string // Original team name from rankings
+  position?: string // Original position from rankings
+  seasonYear?: string // Original season year from rankings
+  playerName?: string // Original player name from rankings
 }
 
 export function DataTable<T extends Record<string, any>>({
   columns,
   data,
   page,
-  showIndex = true,
-  numColLeftAligned = 3
+  showIndex = false,
+  numColLeftAligned = 0,
+  showSearchBar = true,
+  apiResponse,
+  teamName,
+  position,
+  seasonYear,
+  playerName
 }: DataTableProps<T>) {
   const [sortField, setSortField] = React.useState<string | null>(null)
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc')
@@ -160,11 +172,26 @@ export function DataTable<T extends Record<string, any>>({
       });
     } else if (page === "breakdown") {
       const rowData = item as unknown as RankingsPageRow;
+      
+      // Display player info (from home page/rankings)
+      const displayPlayerName = playerName || 'Unknown Player';
+      const displayPlayerTeam = teamName || 'Unknown Team';
+      const displayPlayerPosition = position || 'Unknown Position';
+      
+      // Comparison player info (from selected row)
+      const comparisonPlayerName = rowData.player_name;
+      const comparisonPlayerTeam = rowData.prev_team_name || 'Unknown Team';
+      
       router.push({
         pathname: "/breakdown",
         params: {
-          player_name: rowData.player_name,
-          player_id: 1
+          displayPlayerName: displayPlayerName,
+          displayPlayerTeam: displayPlayerTeam,
+          displayPlayerPosition: displayPlayerPosition,
+          comparisonPlayerName: comparisonPlayerName,
+          comparisonPlayerTeam: comparisonPlayerTeam,
+          seasonYear: seasonYear,
+          apiData: apiResponse ? JSON.stringify(apiResponse) : undefined
         }
       });
     }
@@ -184,30 +211,32 @@ export function DataTable<T extends Record<string, any>>({
       <View style={styles.headerSheen} />
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search..."
-            placeholderTextColor="rgba(163, 163, 163, 0.7)"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+      {showSearchBar && (
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search..."
+              placeholderTextColor="rgba(163, 163, 163, 0.7)"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          
+          <TouchableOpacity
+            style={styles.searchFilterButton}
+            onPress={() => setShowSearchDropdown(!showSearchDropdown)}
+          >
+            <Text style={styles.searchFilterText}>
+              {searchOptions.find(opt => opt.key === searchColumn)?.label || 'All'}
+            </Text>
+            <Text style={styles.dropdownArrow}>▼</Text>
+          </TouchableOpacity>
         </View>
-        
-        <TouchableOpacity
-          style={styles.searchFilterButton}
-          onPress={() => setShowSearchDropdown(!showSearchDropdown)}
-        >
-          <Text style={styles.searchFilterText}>
-            {searchOptions.find(opt => opt.key === searchColumn)?.label || 'All'}
-          </Text>
-          <Text style={styles.dropdownArrow}>▼</Text>
-        </TouchableOpacity>
-      </View>
+      )}
 
       {/* Search Dropdown */}
-      {showSearchDropdown && (
+      {showSearchBar && showSearchDropdown && (
         <>
           {/* Overlay to catch outside taps */}
           <TouchableOpacity 
