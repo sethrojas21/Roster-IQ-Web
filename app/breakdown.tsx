@@ -1,6 +1,7 @@
 import { HistComputeApiResponse } from '@/api/histcomputeapi';
 import { HistPlayerStatsApiResponse } from '@/api/histplayerstats';
 import { DataTable } from '@/components/testing/home/table/data-table';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -410,6 +411,12 @@ export default function PlayerBreakdown() {
 
             <View>
                 <Text style={styles.sectionTitle}>Fit</Text>
+                <View style={styles.sectionNoteRow}>
+                    <Ionicons name="document-text-outline" size={18} color="rgba(163,163,163,1)" style={styles.sectionNoteIcon} />
+                    <Text style={styles.sectionNoteText}>
+                        Aim to be close to the benchmark across metrics — smaller differences are better.
+                    </Text>
+                </View>
                 {(apiResponse || playerStats) && (
                     <View style={styles.tableContainer}>
                         <DataTable 
@@ -431,6 +438,12 @@ export default function PlayerBreakdown() {
 
             <View>
                 <Text style={styles.sectionTitle}>Value</Text>
+                <View style={styles.sectionNoteRow}>
+                    <Ionicons name="document-text-outline" size={18} color="rgba(163,163,163,1)" style={styles.sectionNoteIcon} />
+                    <Text style={styles.sectionNoteText}>
+                        Higher is better: positive differences from the benchmark indicate added value.
+                    </Text>
+                </View>
                 {(apiResponse || playerStats) && (
                     <View style={styles.tableContainer}>
                         <DataTable 
@@ -452,6 +465,12 @@ export default function PlayerBreakdown() {
 
             <View>
                 <Text style={styles.sectionTitle}>Success</Text>
+                <View style={styles.sectionNoteRow}>
+                    <Ionicons name="document-text-outline" size={18} color="rgba(163,163,163,1)" style={styles.sectionNoteIcon} />
+                    <Text style={styles.sectionNoteText}>
+                        Higher is better: positive differences from the benchmark indicate stronger success.
+                    </Text>
+                </View>
                 {(apiResponse || playerStats) && (
                     <View style={styles.tableContainer}>
                         <DataTable 
@@ -552,5 +571,22 @@ const styles = StyleSheet.create({
         marginTop: 16,
         marginHorizontal: 20,
         marginBottom: 32,
+    },
+    sectionNoteRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingLeft: 20,
+        paddingRight: 20,
+        marginTop: 6,
+        gap: 8,
+    },
+    sectionNoteIcon: {
+        marginRight: 8,
+    },
+    sectionNoteText: {
+        flex: 1,
+        color: 'rgba(163, 163, 163, 1)',
+        fontSize: 13,
+        lineHeight: 18,
     },
 });

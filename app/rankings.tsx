@@ -4,9 +4,10 @@ import { columns } from '@/components/testing/rankings/columns';
 import RoundedTextBox from '@/components/testing/rankings/rounded-rectangle';
 import GradientTitle from '@/components/ui/gradient-title';
 import { roundToDecimal } from '@/helpers';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Cell, Legend, Pie, PieChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from 'recharts';
 
 export default function Rankings() {
@@ -24,6 +25,34 @@ export default function Rankings() {
   const [rank, setRank] = useState('--/--');
   const [error, setError] = useState<string | null>(null);
   const [fullApiResponse, setFullApiResponse] = useState<HistComputeApiResponse | null>(null);
+  const [showBssInfo, setShowBssInfo] = useState(false);
+  const [showEssInfo, setShowEssInfo] = useState(false);
+  const [showRankInfo, setShowRankInfo] = useState(false);
+
+  const getRankPercentile = () => {
+    if (!rank || rank === '--/--') return null;
+    const parts = rank.split('/');
+    if (parts.length !== 2) return null;
+    const current = parseInt(parts[0], 10);
+    const total = parseInt(parts[1], 10);
+    if (isNaN(current) || isNaN(total) || total === 0) return null;
+    return current / total; // lower better
+  };
+  const rankPercentile = getRankPercentile();
+  const rankCategory = rankPercentile === null
+    ? 'Pending'
+    : rankPercentile <= 0.30
+      ? 'Top 30%'
+      : rankPercentile >= 0.60
+        ? 'Bottom 40%'
+        : 'Mid Range';
+  const rankColor = rankPercentile === null
+    ? '#9ca3af'
+    : rankPercentile <= 0.30
+      ? '#22c55e'
+      : rankPercentile >= 0.60
+        ? '#ef4444'
+        : '#f59e0b';
 
   const teamNameString = Array.isArray(teamName) ? teamName[0] : teamName;
   const uvicorn_api = `http://localhost:8080/histcompute?team_name=${teamNameString.replace(/\s/g, "_")}&season_year=${seasonYear}&player_id_to_replace=${playerId}`
@@ -233,17 +262,84 @@ export default function Rankings() {
       </View>
       
       <View style={styles.hStackContainer}>
-        <RoundedTextBox title='Rank:' text={rank}></RoundedTextBox>
-        <RoundedTextBox title='ESS:' text={String(roundToDecimal(ess, 3))}></RoundedTextBox>
-        <RoundedTextBox title='BSS:' text={String(roundToDecimal(bss, 3))}></RoundedTextBox>
+        <View style={styles.infoWrapper}>
+          <RoundedTextBox title='Rank:' text={rank}></RoundedTextBox>
+          <Pressable
+            onPress={() => setShowRankInfo(prev => !prev)}
+            onHoverIn={() => setShowRankInfo(true)}
+            onHoverOut={() => setShowRankInfo(false)}
+            style={styles.infoIcon}
+            accessibilityLabel="Rank percentile info"
+          >
+            <Ionicons name="information-circle-outline" size={28} color={rankColor} />
+          </Pressable>
+          {showRankInfo && (
+            <View style={[styles.tooltip, styles.tooltipLeft]} pointerEvents='none'>
+              <Text style={styles.tooltipTitle}>Rank Percentile</Text>
+              <Text style={styles.tooltipText}>
+                {rankPercentile !== null ? `${((1 - rankPercentile) * 100).toFixed(1)}%` : '--%'}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.infoWrapper}>
+          <RoundedTextBox 
+            title='ESS:' 
+            text={String(roundToDecimal(ess, 3))}
+            // textColor={ess > 30 ? '#22c55e' : '#ef4444'}
+          />
+          <Pressable
+            onPress={() => setShowEssInfo(prev => !prev)}
+            onHoverIn={() => setShowEssInfo(true)}
+            onHoverOut={() => setShowEssInfo(false)}
+            style={styles.infoIcon}
+            accessibilityLabel="ESS threshold info"
+          >
+            <Ionicons name="information-circle-outline" size={28} color={ess > 30 ? '#22c55e' : '#ef4444'} />
+          </Pressable>
+          {showEssInfo && (
+            <View style={[styles.tooltip, styles.tooltipLeft]} pointerEvents='none'>
+              <Text style={styles.tooltipTitle}>ESS Threshold</Text>
+              <Text style={styles.tooltipText}>ESS &gt; 30 = Adequate sample</Text>
+              <Text style={styles.tooltipText}>Current: {roundToDecimal(ess, 3)}</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.infoWrapper}>
+          <RoundedTextBox 
+            title='BSS:' 
+            text={String(roundToDecimal(bss, 3))}
+            // textColor={bss > -0.05 ? '#22c55e' : '#ef4444'}
+          />
+          <Pressable
+            onPress={() => setShowBssInfo(prev => !prev)}
+            onHoverIn={() => setShowBssInfo(true)}
+            onHoverOut={() => setShowBssInfo(false)}
+            style={styles.infoIcon}
+            accessibilityLabel="BSS success info"
+          >
+            <Ionicons name="information-circle-outline" size={28} color={bss > -0.05 ? '#22c55e' : '#ef4444'} />
+          </Pressable>
+          {showBssInfo && (
+            <View style={styles.tooltip} pointerEvents='none'>
+              <Text style={styles.tooltipTitle}>BSS Success</Text>
+              <Text style={styles.tooltipText}>BSS &gt; -0.05 = Success</Text>
+              <Text style={styles.tooltipText}>Current: {roundToDecimal(bss, 3)}</Text>
+            </View>
+          )}
+        </View>
 
       </View>
+
+      
 
       
       <DataTable 
         columns={columns} 
         data={stats} 
         page="breakdown" 
+        showIndex={true}
+        numColLeftAligned={2}
         apiResponse={fullApiResponse}
         teamName={teamName as string}
         position={position as string}
@@ -283,11 +379,14 @@ const styles = StyleSheet.create({
     minHeight: 200,
   },
   teamArchetypeText: {
-    color: "white",
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 8,
-    lineHeight: 24,
+    color: '#8A5CF6', // match gradient primary color from GradientTitle
+    fontSize: 36, // match RoundedTextBox value size
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 16, // more space between lines
+    lineHeight: 48, // comfortable line spacing above font size
+    letterSpacing: 0.5,
+    opacity: 0.8
   },
   boxTitle: {
     color: "orange",
@@ -334,5 +433,49 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 18,
     marginBottom: 8,
+  },
+  infoWrapper: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoIcon: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    padding: 4,
+  },
+  tooltip: {
+    position: 'absolute',
+    top: -10,
+    left: '100%',
+    marginLeft: 12,
+    backgroundColor: 'rgba(23,23,23,0.95)',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(138,92,246,0.4)',
+    maxWidth: 180,
+    zIndex: 10,
+  },
+  tooltipTitle: {
+    color: '#8A5CF6',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  tooltipText: {
+    color: 'rgba(229,229,229,0.9)',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  tooltipLeft: {
+    left: 'auto',
+    // Position the tooltip just left of the icon (icon ~28px + padding)
+    right: 56, // slight gap from icon
+    marginLeft: 0,
+    marginRight: 0,
+    top: 8, // align vertically near center of icon
   },
 });

@@ -27,7 +27,7 @@ export const columns: Column<HomePageRow>[] = [
     },
     {
         key: "team_name",
-        header: "Previous Team",
+        header: "New Team",
         accessor: (item) => item.team_name,
         sortable: true,
         flex: 3 // Wider for team names

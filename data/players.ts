@@ -1,50 +1,65 @@
 export const players = [
   {
     name: "Caleb Love",
-    year: "2024",
+    year: 2024,
     team: "Arizona",
+    player_id: 72413,
     position: "Guard"
   },
   {
-    name: "Kyle Filipowski",
-    year: "2024",
-    team: "Duke",
+    name: "Walker Kessler",
+    year: 2022,
+    team: "Arizona",
+    player_id: 72687,
     position: "Center"
   },
   {
-    name: "Donovan Clingan",
-    year: "2024",
-    team: "UConn",
+    name: "Hunter Dickinson",
+    year: 2024,
+    team: "Kansas",
+    player_id: 73454,
     position: "Center"
   },
   {
-    name: "Reed Sheppard",
-    year: "2024",
-    team: "Kentucky",
+    name: "Pelle Larsson",
+    year: 2022,
+    team: "Arizona",
+    player_id: 73366,
     position: "Guard"
   },
   {
-    name: "Zach Edey",
-    year: "2024",
-    team: "Purdue",
-    position: "Center"
+    name: "Andrew Nembhard",
+    year: 2021,
+    team: "Gonzaga",
+    player_id: 66098,
+    position: "Guard"
   },
   {
-    name: "Justin Edwards",
-    year: "2024",
-    team: "Kentucky",
+    name: "Keshad Johnson",
+    year: 2024,
+    team: "Arizona",
+    player_id: 71121,
     position: "Forward"
   },
   {
-    name: "Stephon Castle",
-    year: "2024",
-    team: "UConn",
+    name: "Marcus Domask",
+    year: 2024,
+    team: "Illinois",
+    player_id: 70865,
     position: "Guard"
   },
   {
-    name: "Rob Dillingham",
-    year: "2024",
-    team: "Kentucky",
+    name: "Tyson Walker",
+    year: 2022,
+    team: "Michigan State",
+    player_id: 71731,
     position: "Guard"
-  }
+  },
+  {
+    name: "Kerr Kriisa",
+    year: 2024,
+    team: "West Virginia",
+    player_id: 73770,
+    position: "Guard"
+  },
 ];

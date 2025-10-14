@@ -4,15 +4,16 @@ import { StyleSheet, Text, View } from 'react-native';
 type StatCardProps = {
   title: string;
   text: string;
+  textColor?: string; // optional override for value color
 };
 
-const RoundedTextBox = ({title, text}: StatCardProps) => {
+const RoundedTextBox = ({title, text, textColor}: StatCardProps) => {
   return (
     <View style={styles.container}>
       <View style={styles.roundedRectangle}>
         
         <Text style={styles.titleText}>{title}</Text>
-        <Text style={styles.text}>{text}</Text>
+        <Text style={[styles.text, textColor ? {color: textColor} : null]}>{text}</Text>
 
       </View>
     </View>

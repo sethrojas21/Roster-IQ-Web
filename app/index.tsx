@@ -93,7 +93,8 @@ export default function Index() {
             <PlayerCard 
               key={player.name}
               name={player.name}
-              year={player.year}
+              year={String(player.year)}
+              playerId={player.player_id}
               team={player.team}
               position={player.position}
               gradientLevel={(index % 4) + 1}

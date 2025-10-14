@@ -1,25 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from 'expo-router';
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type Props = {
   name: string;
-  year: string;
+  year: number | string;
   team: string;
   position: string;
-  /** accepts 1–4; 1=red, 2=yellow, 3=green, 4=blue (default) */
   gradientLevel?: number | string;
+  playerId?: number | string; // optional if available
 };
 
 const getGradient = (level?: number | string): readonly [string, string] => {
   const n = Number(level);
   switch (n) {
-    case 1: return ["#FF4E50", "#FC913A"] as const;   // red/orange
-    case 2: return ["#FFD200", "#F7971E"] as const;   // yellow
-    case 3: return ["#00B09B", "#96C93D"] as const;   // green
+    case 1: return ["#FF4E50", "#FC913A"] as const;
+    case 2: return ["#FFD200", "#F7971E"] as const;
+    case 3: return ["#00B09B", "#96C93D"] as const;
     case 4:
-    default: return ["#00C6FF", "#0072FF"] as const;  // blue
+    default: return ["#00C6FF", "#0072FF"] as const;
   }
 };
 
@@ -28,38 +29,48 @@ const PlayerCard: React.FC<Props> = ({
   year,
   team,
   position,
-  gradientLevel = 4
+  gradientLevel = 4,
+  playerId = 0
 }) => {
   const gradientColors = getGradient(gradientLevel);
 
+  const handlePress = () => {
+    router.push({
+      pathname: '/rankings',
+      params: {
+        teamName: team,
+        playerName: name,
+        position: position,
+        seasonYear: String(year),
+        playerId: String(playerId)
+      }
+    });
+  };
+
   return (
-    <LinearGradient
-      colors={gradientColors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.wrapper}
-    >
-      <View style={styles.card}>
-        {/* Name */}
-        <Text style={styles.name}>{name}</Text>
-
-        {/* Year */}
-        <Text style={styles.yearText}>{year}</Text>
-
-        {/* Tags: Team + Position */}
-        <View style={styles.tags}>
-          <View style={styles.tag}>
-            <Ionicons name="location-outline" size={14} color="#fff" />
-            <Text style={styles.tagText}>{team}</Text>
-          </View>
-
-          <View style={styles.tag}>
-            <Ionicons name="person-outline" size={14} color="#fff" />
-            <Text style={styles.tagText}>{position}</Text>
+    <TouchableOpacity activeOpacity={0.85} onPress={handlePress}>
+      <LinearGradient
+        colors={gradientColors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.wrapper}
+      >
+        <View style={styles.card}>
+          <Text style={styles.name}>{name}</Text>
+          <Text style={styles.yearText}>{String(year)}</Text>
+          <View style={styles.tags}>
+            <View style={styles.tag}>
+              <Ionicons name="location-outline" size={14} color="#fff" />
+              <Text style={styles.tagText}>{team}</Text>
+            </View>
+            <View style={styles.tag}>
+              <Ionicons name="person-outline" size={14} color="#fff" />
+              <Text style={styles.tagText}>{position}</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </LinearGradient>
+      </LinearGradient>
+    </TouchableOpacity>
   );
 };
 

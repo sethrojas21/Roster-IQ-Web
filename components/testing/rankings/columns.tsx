@@ -61,6 +61,13 @@ export const columns: Column<RankingsPageRow>[] = [
         flex: 1
     },
     {
+        key: "comp_raw",
+        header: "RVI",
+        accessor: (item) => item.comp_raw.toFixed(3),
+        sortable: true,
+        flex: 1
+    },
+    {
         key: "composite_pct",
         header: "Composite %",
         accessor: (item) => (item.composite_pct * 100).toFixed(1) + '%',
