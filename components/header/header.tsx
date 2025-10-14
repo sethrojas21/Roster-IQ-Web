@@ -1,8 +1,8 @@
-import React from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import React from "react";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type Props = {
   value?: string;
@@ -10,8 +10,7 @@ type Props = {
   onSubmitSearch?: () => void;
   onPressTesting?: () => void;
   onPressTool?: () => void;
-  onPressGrid?: () => void;
-  onPressAbout?: () => void;
+  activeTab?: 'testing' | 'tool' | undefined;
 };
 
 const Header: React.FC<Props> = ({
@@ -20,8 +19,7 @@ const Header: React.FC<Props> = ({
   onSubmitSearch,
   onPressTesting,
   onPressTool,
-  onPressGrid,
-  onPressAbout,
+  activeTab,
 }) => {
   return (
     <SafeAreaView edges={["top"]} style={styles.safe}>
@@ -54,33 +52,46 @@ const Header: React.FC<Props> = ({
 
         {/* Right: Actions */}
         <View style={styles.actions}>
-          {/* Testing (gradient pill) */}
+          {/* Testing pill gradient only when active */}
           <TouchableOpacity onPress={onPressTesting} activeOpacity={0.85}>
-            <LinearGradient
-              colors={["#8A5CF6", "#FF5C97", "#FF7A59"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.testingPill}
-            >
-              <Ionicons name="chatbubble-ellipses-outline" size={14} color="#fff" />
-              <Text style={styles.testingText}>Testing</Text>
-            </LinearGradient>
+            {activeTab === 'testing' ? (
+              <LinearGradient
+                colors={["#8A5CF6", "#FF5C97", "#FF7A59"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.testingPillActive}
+              >
+                <Ionicons name="calculator-outline" size={14} color="#fff" />
+                <Text style={styles.testingTextActive}>Testing</Text>
+              </LinearGradient>
+            ) : (
+              <View style={styles.testingPillInactive}>
+                <Ionicons name="calculator-outline" size={14} color="#fff" />
+                <Text style={styles.testingTextInactive}>Testing</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
-          {/* Tool icon */}
-          <TouchableOpacity onPress={onPressTool} style={styles.iconBtn} hitSlop={8}>
-            <MaterialCommunityIcons name="toolbox-outline" size={20} color="rgba(255,255,255,0.85)" />
+          {/* Tool (pencil icon pill) */}
+          <TouchableOpacity onPress={onPressTool} activeOpacity={0.85}>
+            {activeTab === 'tool' ? (
+              <LinearGradient
+                colors={["#8A5CF6", "#FF5C97", "#FF7A59"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.toolPillActive}
+              >
+                <Ionicons name="pencil-outline" size={14} color="#fff" />
+                <Text style={styles.toolTextActive}>Tool</Text>
+              </LinearGradient>
+            ) : (
+              <View style={styles.toolPill}>
+                <Ionicons name="pencil-outline" size={14} color="#fff" />
+                <Text style={styles.toolText}>Tool</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
-          {/* Grid icon */}
-          <TouchableOpacity onPress={onPressGrid} style={styles.iconBtn} hitSlop={8}>
-            <Ionicons name="grid-outline" size={20} color="rgba(255,255,255,0.85)" />
-          </TouchableOpacity>
-
-          {/* About link */}
-          <TouchableOpacity onPress={onPressAbout} hitSlop={8}>
-            <Text style={styles.about}>About</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -162,24 +173,69 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  testingText: {
+  testingPillActive: {
+    height: 30,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    shadowColor: "#FF5C97",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  testingTextActive: {
     color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "700",
   },
-  iconBtn: {
-    width: 30,
+  testingPillInactive: {
     height: 30,
-    borderRadius: 15,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 6,
     backgroundColor: "rgba(255,255,255,0.06)",
   },
-  about: {
-    color: "rgba(255,255,255,0.85)",
+  testingTextInactive: {
+    color: "#FFFFFF",
     fontSize: 13,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    fontWeight: "600",
+  },
+  toolPill: {
+    height: 30,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  toolPillActive: {
+    height: 30,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    shadowColor: "#FF5C97",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  toolText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  toolTextActive: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
   },
 });
 

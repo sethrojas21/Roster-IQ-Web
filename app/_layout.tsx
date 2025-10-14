@@ -1,15 +1,20 @@
 import Header from "@/components/header/header";
-import "../global.css"
-import { router } from "expo-router";
+import { router, Slot, usePathname } from "expo-router";
 import { SafeAreaView, StyleSheet } from "react-native";
-import { Slot } from "expo-router";
+import "../global.css";
 
 export default function RootLayout() {
   // Header = stuff at top that does not change
   // Slot is for stuff that does change
+  const pathname = usePathname();
+  const activeTab = pathname === '/tool' ? 'tool' : pathname === '/' ? 'testing' : undefined;
   return (
      <SafeAreaView style={[styles.container, styles.app]}>
-        <Header onPressTesting={() => router.push("/")} /> 
+        <Header 
+          onPressTesting={() => router.push("/")} 
+          onPressTool={() => router.push("/tool")} 
+          activeTab={activeTab}
+        /> 
         <Slot />
     </SafeAreaView>
 

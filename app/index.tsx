@@ -103,12 +103,14 @@ export default function Index() {
         </ScrollView>
       </View>
       
-      <View style={[styles.searchSection, styles.side_padding, {padding : 20}]}>
-        <Text style={[styles.header, {paddingBottom:20}]}>Player Search</Text>
+      <View style={styles.searchSection}>
+        <Text style={styles.header}>Player Search</Text>
         {loading ? (
           <ActivityIndicator size="large" color="#fff" style={styles.loader} />
         ) : (
-          <DataTable columns={columns} data={data} page="rankings" />
+          <View style={styles.tableContainer}>
+            <DataTable columns={columns} data={data} page="rankings" />
+          </View>
         )}
       </View>
     </ScrollView>
@@ -156,7 +158,7 @@ const styles = StyleSheet.create({
   },
   tableContainer: {
     flex: 1,
-    marginHorizontal: 24,
+    marginHorizontal: 20,
     marginBottom: 24,
   },
   tableHeader: {
