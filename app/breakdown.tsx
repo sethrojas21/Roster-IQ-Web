@@ -16,6 +16,7 @@ interface FitTableRow {
   ftr: number;
   rimRate: number;
   midRate: number;
+    fit_score?: number; // Added: player's fit score (assumption: composite_scores.fit_pct)
 }
 
 // Interface for the value table data
@@ -28,6 +29,7 @@ interface ValueTableRow {
   stl_percent: number;
   blk_percent: number;
   ts_percent: number;
+    vocbp_score?: number; // Added: player's value score (assumption: composite_scores.vocbp)
 }
 
 // Interface for the success table data
@@ -41,6 +43,7 @@ interface SuccessTableRow {
   oreb_percent?: number;
   stl_percent?: number;
   blk_percent?: number;
+    bss_score?: number; // Only available for display player (apiResponse.bss). Benchmark/comparison show N/A.
 }
 
 export default function PlayerBreakdown() {
@@ -126,6 +129,56 @@ export default function PlayerBreakdown() {
         fetchPlayerStats();
     }, [comparisonPlayerName, comparisonPlayerTeam, seasonYear]);
 
+    // Helper to append inline difference in parentheses vs benchmark row.
+    // Example output: "23.4% (+1.2)" or "0.512 (-0.034)".
+    // If the row is the benchmark itself or benchmark value missing, returns just the formatted value.
+    const formatWithDiff = (
+        rowPlayer: string,
+        value: number | undefined,
+        benchmarkValue: number | undefined,
+        formatFn: (val: number) => string,
+        diffDecimals: number
+    ): string => {
+        if (value === undefined) return 'N/A';
+        const main = formatFn(value);
+        if (rowPlayer === 'Benchmark' || benchmarkValue === undefined) return main;
+        const diff = value - benchmarkValue;
+        const signed = (diff >= 0 ? '+' : '') + Math.abs(diff).toFixed(diffDecimals);
+        return `${main} (${signed})`;
+    };
+
+    // Styled version returning React elements allowing color differences.
+    // tableType: 'fit' | 'value' | 'success'
+    const renderStyledDiff = (
+        tableType: 'fit' | 'value' | 'success',
+        rowPlayer: string,
+        value: number | undefined,
+        benchmarkValue: number | undefined,
+        formatFn: (val: number) => string,
+        diffDecimals: number
+    ) => {
+        const isBenchmark = rowPlayer === 'Benchmark';
+        if (value === undefined) return <Text style={{ color: 'rgba(163,163,163,1)' }}>N/A</Text>;
+        const main = formatFn(value);
+        if (isBenchmark || benchmarkValue === undefined) {
+            return <Text style={{ color: 'white' }}>{main}</Text>;
+        }
+        const diff = value - benchmarkValue;
+        const signed = (diff >= 0 ? '+' : '') + Math.abs(diff).toFixed(diffDecimals);
+        // Color logic: fit -> grey no sign change already computed; value & success -> green for +, red for -
+        const diffColor = tableType === 'fit'
+            ? 'rgba(163,163,163,0.9)'
+            : diff >= 0
+                ? '#22c55e' // green
+                : '#ef4444'; // red
+        return (
+            <Text>
+                <Text style={{ color: 'white' }}>{main} </Text>
+                <Text style={{ color: diffColor }}>({tableType === 'fit' ? Math.abs(diff).toFixed(diffDecimals) : signed})</Text>
+            </Text>
+        );
+    };
+
     // Create fit table columns dynamically based on benchmark data
     const getFitTableColumns = () => {
         const baseColumns = [
@@ -137,6 +190,37 @@ export default function PlayerBreakdown() {
                 width: 150
             }
         ];
+
+        // Append Fit Score column (no diff coloring, just score). Benchmark may not have fit_score.
+        // Determine which player has higher fit_score (display vs comparison) for highlighting
+        let displayFit: number | undefined;
+        let comparisonFit: number | undefined;
+        if (apiResponse?.composite_scores) {
+            apiResponse.composite_scores.forEach(cs => {
+                if (cs.player_name === (displayPlayerName as string)) displayFit = cs.fit_pct;
+                if (cs.player_name === (comparisonPlayerName as string)) comparisonFit = cs.fit_pct;
+            });
+        }
+        const higherFit = displayFit !== undefined && comparisonFit !== undefined
+            ? (displayFit > comparisonFit ? displayPlayerName : comparisonPlayerName)
+            : undefined;
+
+        baseColumns.push({
+            key: 'fit_score',
+            header: 'FS',
+            accessor: (item: FitTableRow) => item.fit_score ?? Number.NEGATIVE_INFINITY,
+            render: (item: FitTableRow) => {
+                const val = item.fit_score;
+                const isWinner = higherFit && item.player === higherFit;
+                const color = isWinner ? '#22c55e' : 'white';
+                return (
+                    <Text style={{ color }}>
+                        {val !== undefined ? val.toFixed(3) : 'N/A'}{isWinner && val !== undefined ? ' ▲' : ''}
+                    </Text>
+                );
+            },
+            sortable: true
+        } as any);
 
         if (!apiResponse?.fs_bmark) return baseColumns;
 
@@ -151,11 +235,20 @@ export default function PlayerBreakdown() {
         ];
 
         potentialColumns.forEach(col => {
-            if (apiResponse.fs_bmark[col.key as keyof typeof apiResponse.fs_bmark] !== undefined) {
+            const bmarkVal = apiResponse.fs_bmark[col.key as keyof typeof apiResponse.fs_bmark] as number | undefined;
+            if (bmarkVal !== undefined) {
                 baseColumns.push({
                     key: col.key,
                     header: col.header,
-                    accessor: (item: FitTableRow) => col.format(item[col.key as keyof FitTableRow] as number),
+                    accessor: (item: FitTableRow) => {
+                        // raw numeric value for sorting/search
+                        return item[col.key as keyof FitTableRow];
+                    },
+                    render: (item: FitTableRow) => {
+                        const rawVal = item[col.key as keyof FitTableRow] as number | undefined;
+                        const diffDecimals = ['usg_percent','fga_per100'].includes(col.key) ? 1 : 3;
+                        return renderStyledDiff('fit', item.player, rawVal, bmarkVal, (v) => col.format(v), diffDecimals);
+                    },
                     sortable: true
                 } as any);
             }
@@ -170,6 +263,12 @@ export default function PlayerBreakdown() {
     const getFitTableData = (): FitTableRow[] => {
         const data: FitTableRow[] = [];
 
+        // Build composite score lookup for fit_score extraction
+        const compositeMap = new Map<string, any>();
+        apiResponse?.composite_scores?.forEach(cs => {
+            compositeMap.set(cs.player_name, cs);
+        });
+
         // Add benchmark row
         if (apiResponse?.fs_bmark) {
             data.push({
@@ -180,7 +279,8 @@ export default function PlayerBreakdown() {
                 fga_per100: apiResponse.fs_bmark.fga_per100,
                 ftr: apiResponse.fs_bmark.ftr,
                 rimRate: apiResponse.fs_bmark.rimRate,
-                midRate: apiResponse.fs_bmark.midRate
+                midRate: apiResponse.fs_bmark.midRate,
+                fit_score: compositeMap.get('Benchmark')?.fit_pct // likely undefined; kept for completeness
             });
         }
 
@@ -194,7 +294,8 @@ export default function PlayerBreakdown() {
                 fga_per100: apiResponse.fs_plyr.fga_per100,
                 ftr: apiResponse.fs_plyr.ftr,
                 rimRate: apiResponse.fs_plyr.rimRate,
-                midRate: apiResponse.fs_plyr.midRate
+                midRate: apiResponse.fs_plyr.midRate,
+                fit_score: compositeMap.get(displayPlayerName as string)?.fit_pct
             });
         }
 
@@ -208,7 +309,8 @@ export default function PlayerBreakdown() {
                 fga_per100: playerStats.player_stats.fga_per100,
                 ftr: playerStats.player_stats.ftr,
                 rimRate: playerStats.player_stats.rimRate,
-                midRate: playerStats.player_stats.midRate
+                midRate: playerStats.player_stats.midRate,
+                fit_score: compositeMap.get(comparisonPlayerName as string)?.fit_pct
             });
         }
 
@@ -227,6 +329,36 @@ export default function PlayerBreakdown() {
             }
         ];
 
+        // Add Value Score (VOCBP) column early
+        let displayVocbp: number | undefined;
+        let comparisonVocbp: number | undefined;
+        if (apiResponse?.composite_scores) {
+            apiResponse.composite_scores.forEach(cs => {
+                if (cs.player_name === (displayPlayerName as string)) displayVocbp = cs.vocbp;
+                if (cs.player_name === (comparisonPlayerName as string)) comparisonVocbp = cs.vocbp;
+            });
+        }
+        const higherVocbp = displayVocbp !== undefined && comparisonVocbp !== undefined
+            ? (displayVocbp > comparisonVocbp ? displayPlayerName : comparisonPlayerName)
+            : undefined;
+
+        baseColumns.push({
+            key: 'vocbp_score',
+            header: 'VOCBP',
+            accessor: (item: ValueTableRow) => item.vocbp_score ?? Number.NEGATIVE_INFINITY,
+            render: (item: ValueTableRow) => {
+                const val = item.vocbp_score;
+                const isWinner = higherVocbp && item.player === higherVocbp;
+                const color = isWinner ? '#22c55e' : 'white';
+                return (
+                    <Text style={{ color }}>
+                        {val !== undefined ? val.toFixed(3) : 'N/A'}{isWinner && val !== undefined ? ' ▲' : ''}
+                    </Text>
+                );
+            },
+            sortable: true
+        } as any);
+
         if (!apiResponse?.vocbp_bmark) return baseColumns;
 
         const potentialColumns = [
@@ -240,11 +372,16 @@ export default function PlayerBreakdown() {
         ];
 
         potentialColumns.forEach(col => {
-            if (apiResponse.vocbp_bmark[col.key as keyof typeof apiResponse.vocbp_bmark] !== undefined) {
+            const bmarkVal = apiResponse.vocbp_bmark[col.key as keyof typeof apiResponse.vocbp_bmark] as number | undefined;
+            if (bmarkVal !== undefined) {
                 baseColumns.push({
                     key: col.key,
                     header: col.header,
-                    accessor: (item: ValueTableRow) => col.format(item[col.key as keyof ValueTableRow] as number),
+                    accessor: (item: ValueTableRow) => item[col.key as keyof ValueTableRow],
+                    render: (item: ValueTableRow) => {
+                        const rawVal = item[col.key as keyof ValueTableRow] as number | undefined;
+                        return renderStyledDiff('value', item.player, rawVal, bmarkVal, (v) => col.format(v), 1);
+                    },
                     sortable: true
                 } as any);
             }
@@ -258,6 +395,8 @@ export default function PlayerBreakdown() {
     // Create value table data
     const getValueTableData = (): ValueTableRow[] => {
         const data: ValueTableRow[] = [];
+        const compositeMap = new Map<string, any>();
+        apiResponse?.composite_scores?.forEach(cs => compositeMap.set(cs.player_name, cs));
 
         // Add benchmark row
         if (apiResponse?.vocbp_bmark) {
@@ -269,7 +408,8 @@ export default function PlayerBreakdown() {
                 ft_percent: apiResponse.vocbp_bmark.ft_percent,
                 stl_percent: apiResponse.vocbp_bmark.stl_percent,
                 blk_percent: apiResponse.vocbp_bmark.blk_percent,
-                ts_percent: apiResponse.vocbp_bmark.ts_percent
+                ts_percent: apiResponse.vocbp_bmark.ts_percent,
+                vocbp_score: compositeMap.get('Benchmark')?.vocbp // may not exist
             });
         }
 
@@ -283,7 +423,8 @@ export default function PlayerBreakdown() {
                 ft_percent: apiResponse.vocbp_plyr.ft_percent,
                 stl_percent: apiResponse.vocbp_plyr.stl_percent,
                 blk_percent: apiResponse.vocbp_plyr.blk_percent,
-                ts_percent: apiResponse.vocbp_plyr.ts_percent
+                ts_percent: apiResponse.vocbp_plyr.ts_percent,
+                vocbp_score: compositeMap.get(displayPlayerName as string)?.vocbp
             });
         }
 
@@ -297,7 +438,8 @@ export default function PlayerBreakdown() {
                 ft_percent: playerStats.player_stats.ft_percent,
                 stl_percent: playerStats.player_stats.stl_percent,
                 blk_percent: playerStats.player_stats.blk_percent,
-                ts_percent: playerStats.player_stats.ts_percent
+                ts_percent: playerStats.player_stats.ts_percent,
+                vocbp_score: compositeMap.get(comparisonPlayerName as string)?.vocbp
             });
         }
 
@@ -316,6 +458,15 @@ export default function PlayerBreakdown() {
             }
         ];
 
+        // Add Success Score (BSS) column.
+        baseColumns.push({
+            key: 'bss_score',
+            header: 'BSS',
+            accessor: (item: SuccessTableRow) => item.bss_score ?? Number.NEGATIVE_INFINITY,
+            render: (item: SuccessTableRow) => <Text style={{ color: 'white' }}>{item.bss_score !== undefined ? item.bss_score.toFixed(3) : 'N/A'}</Text>,
+            sortable: true
+        } as any);
+
         if (!apiResponse?.succ_bmark) return baseColumns;
 
         const potentialColumns = [
@@ -330,14 +481,16 @@ export default function PlayerBreakdown() {
         ];
 
         potentialColumns.forEach(col => {
-            const benchmarkValue = apiResponse.succ_bmark[col.key as keyof typeof apiResponse.succ_bmark];
-            if (benchmarkValue !== undefined) {
+            const bmarkVal = apiResponse.succ_bmark[col.key as keyof typeof apiResponse.succ_bmark] as number | undefined;
+            if (bmarkVal !== undefined) {
                 baseColumns.push({
                     key: col.key,
                     header: col.header,
-                    accessor: (item: SuccessTableRow) => {
-                        const value = item[col.key as keyof SuccessTableRow] as number | undefined;
-                        return value !== undefined ? col.format(value) : 'N/A';
+                    accessor: (item: SuccessTableRow) => item[col.key as keyof SuccessTableRow],
+                    render: (item: SuccessTableRow) => {
+                        const rawVal = item[col.key as keyof SuccessTableRow] as number | undefined;
+                        const diffDecimals = ['porpag','dporpag'].includes(col.key) ? 3 : 1;
+                        return renderStyledDiff('success', item.player, rawVal, bmarkVal, (v) => col.format(v), diffDecimals);
                     },
                     sortable: true
                 } as any);
@@ -352,6 +505,8 @@ export default function PlayerBreakdown() {
     // Create success table data
     const getSuccessTableData = (): SuccessTableRow[] => {
         const data: SuccessTableRow[] = [];
+        const compositeMap = new Map<string, any>();
+        apiResponse?.composite_scores?.forEach(cs => compositeMap.set(cs.player_name, cs));
 
         // Add benchmark row
         if (apiResponse?.succ_bmark) {
@@ -364,7 +519,8 @@ export default function PlayerBreakdown() {
                 dreb_percent: apiResponse.succ_bmark.dreb_percent,
                 oreb_percent: apiResponse.succ_bmark.oreb_percent,
                 stl_percent: apiResponse.succ_bmark.stl_percent,
-                blk_percent: apiResponse.succ_bmark.blk_percent
+                blk_percent: apiResponse.succ_bmark.blk_percent,
+                bss_score: undefined // Success score not defined for benchmark
             });
         }
 
@@ -379,7 +535,8 @@ export default function PlayerBreakdown() {
                 dreb_percent: apiResponse.succ_plyr.dreb_percent,
                 oreb_percent: apiResponse.succ_plyr.oreb_percent,
                 stl_percent: apiResponse.succ_plyr.stl_percent,
-                blk_percent: apiResponse.succ_plyr.blk_percent
+                blk_percent: apiResponse.succ_plyr.blk_percent,
+                bss_score: apiResponse.bss // Success score applies to display player only
             });
         }
 
@@ -394,7 +551,8 @@ export default function PlayerBreakdown() {
                 dreb_percent: playerStats.player_stats.dreb_percent,
                 oreb_percent: playerStats.player_stats.oreb_percent,
                 stl_percent: playerStats.player_stats.stl_percent,
-                blk_percent: playerStats.player_stats.blk_percent
+                blk_percent: playerStats.player_stats.blk_percent,
+                bss_score: undefined // No success score for comparison player
             });
         }
 
@@ -405,7 +563,7 @@ export default function PlayerBreakdown() {
         <ScrollView style={styles.container}>
             <View style={styles.content}>
                 <Text style={styles.comparisonTitle}>
-                    {displayPlayerName} vs {comparisonPlayerName}
+                    Benchmark vs {displayPlayerName} vs {comparisonPlayerName}
                 </Text>
             </View>
 
@@ -513,7 +671,7 @@ const styles = StyleSheet.create({
         lineHeight: 40,
     },
     sectionTitle : {
-        color: "white",
+        color: "orange",
         fontSize : 32,
         paddingLeft : 20,
         fontWeight : 'bold'

@@ -9,7 +9,8 @@ import { HomePageRow } from "./columns"
 interface Column<T> {
   key: string;
   header: string;
-  accessor: (item: T) => any;
+  accessor: (item: T) => any; // Used for search/sort (raw value)
+  render?: (item: T) => React.ReactNode; // Used for display (allows styled Text fragments)
   sortable?: boolean;
   width?: number | string;
   flex?: number;
@@ -113,8 +114,8 @@ export function DataTable<T extends Record<string, any>>({
     if (!column) return filteredData;
 
     return [...filteredData].sort((a, b) => {
-      const aVal = column.accessor(a);
-      const bVal = column.accessor(b);
+  const aVal = column.accessor(a);
+  const bVal = column.accessor(b);
       
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
@@ -317,15 +318,31 @@ export function DataTable<T extends Record<string, any>>({
                         { width: getColumnWidth(column, colIndex) }
                       ]}
                     >
-                      <Text style={[
-                        styles.cellText,
-                        { textAlign: colIndex < numColLeftAligned ? 'left' : 'right' }
-                      ]} numberOfLines={2}>
-                        {column.key === 'index' 
-                          ? (startIndex + rowIndex + 1).toString()
-                          : String(column.accessor(item) || '')
-                        }
-                      </Text>
+                          {column.key === 'index' ? (
+                            <Text style={[
+                              styles.cellText,
+                              { textAlign: colIndex < numColLeftAligned ? 'left' : 'right' }
+                            ]} numberOfLines={2}>
+                              {startIndex + rowIndex + 1}
+                            </Text>
+                          ) : (
+                            // Prefer custom render for styled diff display; fallback to accessor string
+                            column.render ? (
+                              <Text style={[
+                                styles.cellText,
+                                { textAlign: colIndex < numColLeftAligned ? 'left' : 'right' }
+                              ]} numberOfLines={2}>
+                                {column.render(item)}
+                              </Text>
+                            ) : (
+                              <Text style={[
+                                styles.cellText,
+                                { textAlign: colIndex < numColLeftAligned ? 'left' : 'right' }
+                              ]} numberOfLines={2}>
+                                {String(column.accessor(item) ?? '')}
+                              </Text>
+                            )
+                          )}
                     </View>
                   ))}
                 </TouchableOpacity>
